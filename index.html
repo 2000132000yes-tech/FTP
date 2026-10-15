@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2D Pixel Fighter - 8 Frame Dot & 2.5D FX</title>
+    <title>2D Pixel Fighter - 4-Hit Combo & Advanced Mechanics</title>
     <style>
         * {
             margin: 0;
@@ -184,7 +184,7 @@ resizeGame();
 
 const GROUND_Y = size * 0.8;
 
-// --- 입력 관리 (멀티터치/동시입력 완벽 대응) ---
+// --- 멀티터치 및 입력 관리 ---
 const input = { x: 0, atk: false, skill: false, jump: false };
 
 const joyZone = document.getElementById('joystick-zone');
@@ -236,36 +236,41 @@ function updateJoystick(touch) {
 
 function bindBtn(id, key) {
     const btn = document.getElementById(id);
-    btn.addEventListener('touchstart', (e) => { e.preventDefault(); input[key] = true; });
+    btn.addEventListener('touchstart', (e) => { 
+        e.preventDefault(); 
+        input[key] = true; 
+        if (key === 'jump') handleJumpInput();
+    });
     btn.addEventListener('touchend', (e) => { e.preventDefault(); input[key] = false; });
 }
 bindBtn('btn-atk', 'atk');
 bindBtn('btn-skill', 'skill');
 bindBtn('btn-jump', 'jump');
 
-// --- 화면 흔들림(Screen Shake) 시스템 ---
+// --- 화면 흔들림 및 텍스트 ---
 let screenShakeTimer = 0;
 let screenShakeIntensity = 0;
-
 function triggerShake(duration, intensity) {
     screenShakeTimer = duration;
     screenShakeIntensity = intensity;
 }
 
-// --- 데미지 텍스트 시스템 ---
 const damageTexts = [];
 function addDamageText(x, y, text, isCritical = false) {
     damageTexts.push({
-        x: x + (Math.random() - 0.5) * 20,
+        x: x + (Math.random() - 0.5) * 15,
         y: y - 20,
         text: text,
         life: 25,
         color: isCritical ? '#ff0000' : '#000000',
-        scale: isCritical ? 1.4 : 1.0
+        scale: isCritical ? 1.3 : 1.0
     });
 }
 
-// --- 플레이어 클래스 (8프레임 도트 애니메이션) ---
+// 잔상 저장 배열
+const swordTrails = [];
+
+// --- 플레이어 클래스 ---
 class Player {
     constructor() {
         this.width = 28;
@@ -276,19 +281,66 @@ class Player {
         this.speed = 3.2;
         this.facing = 1;
         this.isGrounded = true;
-        this.state = 'idle';
-        this.atkTimer = 0;
-        this.weaponAngle = 0;
-        this.frameCounter = 0; // 8프레임 모션 루프 카운터
+
+        // 전투 상태 변수
+        this.state = 'idle'; // idle, attack, skill
+        this.comboStep = 1; // 1 ~ 4단 평타
+        this.atkAnimTimer = 0;
+        
+        // 4타 후 점프 런처 판정용
+        this.canLauncherWindow = false;
+        this.launcherWindowTimer = 0;
+
+        // 1스킬 지속 공격 관리
+        this.skillTimer = 0;
+        this.skillHitInterval = 0;
+
+        // 홀드(공중 멈춤) 상태
+        this.isHoldAction = false;
+        this.holdTimer = 0;
+
+        this.frameCounter = 0; // 모든 애니메이션 8프레임 엄격 적용
     }
 
     update() {
-        // 이동 (버튼과 동시 입력 가능)
-        if (this.state !== 'attack' && this.state !== 'skill') {
+        // 공중 홀드 상태(공중에서 맞추고 멈춰있는 상태) 처리
+        if (this.isHoldAction) {
+            this.holdTimer--;
+            if (this.holdTimer <= 0) {
+                this.isHoldAction = false;
+            }
+            return;
+        }
+
+        // 스킬 사용 중 이동 및 지속 틱 데미지 처리
+        if (this.state === 'skill') {
+            // 스킬 중 이동 가능
+            this.x += input.x * (this.speed * 0.7);
+            this.x = Math.max(10, Math.min(size - this.width - 10, this.x));
+
+            this.skillTimer--;
+            this.skillHitInterval++;
+
+            // 돌리는 시간 동안 맞으면 조금씩 위로 띄우며 지속 데미지
+            if (this.skillHitInterval >= 6) {
+                this.skillHitInterval = 0;
+                triggerSkillTick();
+            }
+
+            if (this.skillTimer <= 0) {
+                this.state = 'idle';
+            }
+            return;
+        }
+
+        // 일반 이동 (8프레임 엄격 연동)
+        if (this.state !== 'attack') {
             this.x += input.x * this.speed;
             if (Math.abs(input.x) > 0.1) {
                 this.facing = input.x > 0 ? 1 : -1;
-                this.frameCounter++; // 이동 시 프레임 증가
+                this.frameCounter++;
+            } else {
+                this.frameCounter = 0;
             }
         }
 
@@ -312,32 +364,42 @@ class Player {
 
         this.x = Math.max(10, Math.min(size - this.width - 10, this.x));
 
-        // 공격 액션
-        if (input.atk && this.atkTimer === 0) {
+        // 4타 후 점프키 런처 윈도우 타이머 갱신
+        if (this.canLauncherWindow) {
+            this.launcherWindowTimer--;
+            if (this.launcherWindowTimer <= 0) {
+                this.canLauncherWindow = false;
+            }
+        }
+
+        // 평타 입력 처리 (총 4번의 애니메이션 분할)
+        if (input.atk && this.state !== 'attack') {
             this.state = 'attack';
-            this.atkTimer = 12;
-            this.weaponAngle = -Math.PI / 3;
-            triggerHitbox(this.x + (this.facing === 1 ? this.width + 10 : -35), this.y + 15, 40, 12, false);
+            this.atkAnimTimer = 12; // 8프레임 기준 애니메이션 길이
+            
+            // 4단 콤보 실행
+            executeAttackCombo(this.comboStep);
+            
             input.atk = false;
         }
 
-        // 스킬 액션 (화려한 2.5D 이펙트 포함)
-        if (input.skill && this.atkTimer === 0) {
-            this.state = 'skill';
-            this.atkTimer = 24;
-            triggerShake(12, 6);
-            triggerHitbox(this.x + this.width / 2, this.y + this.height / 2, 70, 32, true);
-            input.skill = false;
+        if (this.state === 'attack') {
+            this.atkAnimTimer--;
+            if (this.atkAnimTimer <= 0) {
+                this.state = 'idle';
+                this.comboStep++;
+                if (this.comboStep > 4) {
+                    this.comboStep = 1; // 4타 후 초기화
+                }
+            }
         }
 
-        if (this.atkTimer > 0) {
-            this.atkTimer--;
-            if (this.state === 'attack') {
-                this.weaponAngle += (Math.PI / 5) * this.facing;
-            } else if (this.state === 'skill') {
-                this.weaponAngle += Math.PI / 2.5;
-            }
-            if (this.atkTimer === 0) this.state = 'idle';
+        // 스킬 입력 처리 (1스킬: 쓰면서 움직임)
+        if (input.skill) {
+            this.state = 'skill';
+            this.skillTimer = 50; // 지속 시간
+            this.skillHitInterval = 0;
+            input.skill = false;
         }
     }
 
@@ -345,78 +407,119 @@ class Player {
         ctx.save();
         ctx.translate(this.x + this.width / 2, this.y + this.height);
 
-        // --- 8프레임 픽셀 아트 애니메이션 계산 ---
-        let animFrame = Math.floor((this.frameCounter / 6) % 8); // 8단계 세분화 프레임
-        let bounce = Math.abs(Math.sin(animFrame * (Math.PI / 4))) * 3;
-        if (Math.abs(input.x) < 0.1) bounce = 0;
+        // --- 8프레임 완벽 연동 애니메이션 ---
+        let animFrame = Math.floor((this.frameCounter / 4) % 8);
+        let bounce = Math.abs(Math.sin(animFrame * (Math.PI / 4))) * 2.5;
+        if (Math.abs(input.x) < 0.1 && this.state === 'idle') bounce = 0;
 
         ctx.lineWidth = 2;
         ctx.strokeStyle = '#000000';
 
-        // 픽셀 머리
+        // 머리 (8프레임 도트)
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(-9, -40 - bounce, 18, 16);
         ctx.strokeRect(-9, -40 - bounce, 18, 16);
 
-        // 눈 (도트)
+        // 눈
         ctx.fillStyle = '#000000';
         let eyePos = this.facing === 1 ? 2 : -6;
         ctx.fillRect(eyePos, -35 - bounce, 4, 4);
 
-        // 픽셀 몸통 (전투 상태별 색상 변경)
-        ctx.fillStyle = this.state === 'skill' ? '#444444' : '#000000';
+        // 몸통
+        ctx.fillStyle = this.state === 'skill' ? '#333333' : '#000000';
         ctx.fillRect(-7, -24 - bounce, 14, 15);
 
-        // 8프레임 다리 모션
+        // 8프레임 다리
         ctx.fillStyle = '#ffffff';
-        let legOffsetA = Math.sin(animFrame * (Math.PI / 4)) * 4;
+        let legOffsetA = Math.sin(animFrame * (Math.PI / 4)) * 3.5;
         let legOffsetB = -legOffsetA;
         ctx.fillRect(-6 + legOffsetA, -9, 5, 9);
         ctx.strokeRect(-6 + legOffsetA, -9, 5, 9);
         ctx.fillRect(1 + legOffsetB, -9, 5, 9);
         ctx.strokeRect(1 + legOffsetB, -9, 5, 9);
 
-        // 입체 무기 (검)
+        // --- 새로 디자인된 검 (정교한 픽셀 도트 칼 모델) ---
         ctx.save();
         ctx.translate(0, -16 - bounce);
-        if (this.state === 'attack' || this.state === 'skill') {
-            ctx.rotate(this.weaponAngle);
+        
+        let swordAngle = 0;
+        if (this.state === 'attack') {
+            let progress = (12 - this.atkAnimTimer) / 12; // 0 ~ 1
+            swordAngle = (progress * Math.PI * 1.2 - 0.5) * this.facing;
+        } else if (this.state === 'skill') {
+            swordAngle = (Date.now() / 40) * this.facing; // 스킬 시 회전
         } else {
-            ctx.rotate((this.facing * Math.PI) / 4);
+            swordAngle = (this.facing * Math.PI) / 6;
+        }
+        ctx.rotate(swordAngle);
+
+        // 도트 검 모델 렌더링 (자루, 코스가드, 날)
+        ctx.fillStyle = '#553311'; // 검자루
+        ctx.fillRect(-2, 0, 4, 8);
+        ctx.fillStyle = '#111111'; // 코스가드
+        ctx.fillRect(-6, 0, 12, 3);
+        ctx.fillStyle = '#ffffff'; // 칼날 (검은 윤곽선)
+        ctx.fillRect(-3, -22, 6, 22);
+        ctx.strokeRect(-3, -22, 6, 22);
+        ctx.fillStyle = '#cccccc'; // 칼날 내부 광택
+        ctx.fillRect(-1, -20, 2, 18);
+
+        // 칼 휘두를 때 검 잔상(Trail) 생성 기록
+        if (this.state === 'attack' || this.state === 'skill') {
+            let tipX = this.x + this.width/2 + Math.cos(swordAngle) * 25 * this.facing;
+            let tipY = this.y + this.height - 16 - bounce + Math.sin(swordAngle) * 25;
+            swordTrails.push({ x: tipX, y: tipY, alpha: 0.6 });
         }
 
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, -2, 3, 6);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(3, -3, 24, 6);
-        ctx.strokeRect(3, -3, 24, 6);
         ctx.restore();
-
         ctx.restore();
     }
 }
 
-// --- 더미 클래스 ---
+// --- 더미 클래스 (피격, 넉백, 공중 체공 관리) ---
 class Dummy {
     constructor() {
         this.width = 28;
         this.height = 42;
         this.x = size * 0.7;
         this.y = GROUND_Y - this.height;
+        this.vy = 0;
         this.hp = 100;
         this.maxHp = 100;
         this.hitTimer = 0;
         this.vx = 0;
+        this.isAirborne = false; // 공중에 뜸 상태
+        this.isHold = false;     // 스킬 공중 맞춤 홀드 상태
+        this.holdTimer = 0;
     }
 
     update() {
+        if (this.isHold) {
+            this.holdTimer--;
+            if (this.holdTimer <= 0) {
+                this.isHold = false;
+            }
+            return;
+        }
+
         this.x += this.vx;
         this.vx *= 0.8;
         this.x = Math.max(size * 0.4, Math.min(size - this.width - 10, this.x));
 
+        // 공중 체공 및 낙하 처리
+        if (this.isAirborne) {
+            this.y += this.vy;
+            this.vy += 0.5;
+            if (this.y >= GROUND_Y - this.height) {
+                this.y = GROUND_Y - this.height;
+                this.vy = 0;
+                this.isAirborne = false;
+            }
+        }
+
         if (this.hitTimer > 0) this.hitTimer--;
-        if (this.hp < this.maxHp && this.hitTimer === 0) {
-            this.hp += 0.25;
+        if (this.hp < this.maxHp && this.hitTimer === 0 && !this.isAirborne) {
+            this.hp += 0.2;
         }
         document.getElementById('dummy-hp').style.width = `${(this.hp / this.maxHp) * 100}%`;
     }
@@ -433,7 +536,6 @@ class Dummy {
         ctx.fillRect(0, 0, this.width, this.height);
         ctx.strokeRect(0, 0, this.width, this.height);
 
-        // 더미 X자 마크
         ctx.beginPath();
         ctx.moveTo(7, 10); ctx.lineTo(21, 22);
         ctx.moveTo(21, 10); ctx.lineTo(7, 22);
@@ -443,79 +545,81 @@ class Dummy {
     }
 }
 
-// --- 2.5D 이펙트 및 히트 시스템 ---
-const particles = [];
-const fxRings = [];
+// --- 4단 콤보 및 메카닉 로직 ---
+function executeAttackCombo(step) {
+    let damage = 8 + step * 3; // 타수에 따라 데미지 증가
+    let range = 45;
 
-function triggerHitbox(x, y, range, damage, isSpin) {
-    let dx = (dummy.x + dummy.width / 2) - x;
-    let dy = (dummy.y + dummy.height / 2) - y;
-    let dist = Math.hypot(dx, dy);
+    let dx = (dummy.x + dummy.width / 2) - (player.x + player.width / 2);
+    let dy = Math.abs((dummy.y + dummy.height / 2) - (player.y + player.height / 2));
 
-    if (dist < range) {
+    if (Math.abs(dx) < range && dy < 40) {
         dummy.hp = Math.max(0, dummy.hp - damage);
         dummy.hitTimer = 10;
-        dummy.vx = player.facing * (isSpin ? 8 : 4);
-        
-        // 데미지 텍스트 표기 생성 (상대방 머리 위)
-        addDamageText(dummy.x + dummy.width / 2, dummy.y, Math.round(damage), isSpin);
-        if (!isSpin) triggerShake(4, 3);
-    }
+        addDamageText(dummy.x + dummy.width / 2, dummy.y, damage, step === 4);
 
-    // [2.5D 스킬 이펙트] 입체 회전 링 웨이브
-    if (isSpin) {
-        fxRings.push({ x, y, radius: 10, maxRadius: 55, alpha: 1 });
-    }
-
-    // [2.5D 파티클 팝업] Z축 입체감이 느껴지는 픽셀 스파크
-    for (let i = 0; i < (isSpin ? 20 : 10); i++) {
-        let angle = (Math.PI * 2 * i) / (isSpin ? 20 : 10);
-        let speed = Math.random() * 5 + 2;
-        particles.push({
-            x, y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed * 0.5,
-            vz: Math.random() * 4 + 1,
-            z: 0,
-            size: Math.random() * 4 + 2,
-            life: 18
-        });
+        if (step < 4) {
+            // 1~3타: 조금씩 밀림
+            dummy.vx = player.facing * 3;
+            player.canLauncherWindow = false;
+        } else {
+            // 4타: 상대를 크게 밀치고 0.7초 동안 점프키로 띄울 수 있는 창(Window) 열기
+            dummy.vx = player.facing * 9;
+            player.canLauncherWindow = true;
+            player.launcherWindowTimer = 42; // 0.7초 (60fps 기준 약 42프레임)
+            triggerShake(6, 4);
+        }
     }
 }
 
-function updateAndDrawEffects() {
-    // 2.5D 회전 링
-    for (let i = fxRings.length - 1; i >= 0; i--) {
-        let ring = fxRings[i];
-        ctx.save();
-        ctx.translate(ring.x, ring.y);
-        ctx.scale(1, 0.35); // 2.5D 원근 투영
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = `rgba(0, 0, 0, ${ring.alpha})`;
-        ctx.beginPath();
-        ctx.arc(0, 0, ring.radius, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-
-        ring.radius += 4;
-        ring.alpha -= 0.07;
-        if (ring.alpha <= 0) fxRings.splice(i, 1);
+// 4타 후 0.7초 이내 점프키 입력 시 상대 공중 띄우기 (Launcher)
+function handleJumpInput() {
+    if (player.canLauncherWindow) {
+        let dx = Math.abs((dummy.x + dummy.width / 2) - (player.x + player.width / 2));
+        if (dx < 70) {
+            dummy.isAirborne = true;
+            dummy.vy = -11; // 상대를 공중으로 확 띄움
+            player.canLauncherWindow = false;
+            addDamageText(dummy.x + dummy.width / 2, dummy.y - 15, "LAUNCHER!", true);
+            triggerShake(8, 5);
+        }
     }
+}
 
-    // 2.5D 픽셀 파티클
-    for (let i = particles.length - 1; i >= 0; i--) {
-        let p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.z += p.vz;
-        p.vz -= 0.35;
-        p.life--;
+// 1스킬 지속 틱 데미지 (맞으면 살짝 위로 띄우며 지속 타격)
+function triggerSkillTick() {
+    let dx = (dummy.x + dummy.width / 2) - (player.x + player.width / 2);
+    let dy = Math.abs((dummy.y + dummy.height / 2) - (player.y + player.height / 2));
 
-        let renderY = p.y - p.z;
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(p.x, renderY, p.size, p.size);
+    if (Math.abs(dx) < 65 && dy < 50) {
+        dummy.hp = Math.max(0, dummy.hp - 4);
+        dummy.hitTimer = 6;
+        addDamageText(dummy.x + dummy.width / 2, dummy.y, 4);
 
-        if (p.life <= 0) particles.splice(i, 1);
+        // 공중에서 맞추면 나와 상대가 그 자리에 지속시간까지 가만히 멈춰서 계속 때림
+        if (!dummy.isAirborne && player.y < GROUND_Y - player.height - 10) {
+            dummy.isHold = true;
+            dummy.holdTimer = 25;
+            player.isHoldAction = true;
+            player.holdTimer = 25;
+            addDamageText(dummy.x, dummy.y - 30, "AIR LOCK!", true);
+        } else {
+            // 지상에서도 살짝 위로 띄우며 지속 타격
+            dummy.y -= 2;
+            dummy.vx = player.facing * 1.5;
+        }
+    }
+}
+
+// --- 이펙트 및 잔상 렌더링 ---
+function updateAndDrawEffects() {
+    // 칼 잔상 (Trail) 렌더링
+    for (let i = swordTrails.length - 1; i >= 0; i--) {
+        let t = swordTrails[i];
+        ctx.fillStyle = `rgba(0, 0, 0, ${t.alpha})`;
+        ctx.fillRect(t.x, t.y, 4, 4);
+        t.alpha -= 0.12;
+        if (t.alpha <= 0) swordTrails.splice(i, 1);
     }
 
     // 데미지 텍스트 렌더링
@@ -539,7 +643,6 @@ function updateAndDrawEffects() {
 function drawBackground() {
     ctx.clearRect(0, 0, size, size);
 
-    // 화면 흔들림 오프셋 적용
     if (screenShakeTimer > 0) {
         let sx = (Math.random() - 0.5) * screenShakeIntensity;
         let sy = (Math.random() - 0.5) * screenShakeIntensity;
@@ -556,7 +659,7 @@ function drawBackground() {
     ctx.stroke();
 }
 
-// --- 게임 루프 ---
+// --- 메인 루프 ---
 const player = new Player();
 const dummy = new Dummy();
 
