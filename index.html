@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2.5D Mobile Pixel Fighter</title>
+    <title>2D Mobile Pixel Fighter with 2.5D Effects</title>
     <style>
         * {
             margin: 0;
@@ -20,42 +20,46 @@
             overflow: hidden;
             background-color: #ffffff;
             font-family: monospace, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
         }
 
-        #game-container {
+        /* 게임 영역 컨테이너 (정사각형 및 상단 배치) */
+        #game-wrapper {
             position: relative;
-            width: 100vw;
-            height: 100vh;
+            margin-top: 10px;
+            border: 3px solid #000;
             background: #ffffff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
         canvas {
             display: block;
-            width: 100%;
-            height: 100%;
             image-rendering: pixelated;
         }
 
-        /* UI Overlays */
+        /* HUD (체력바) */
         #hud {
             position: absolute;
-            top: 15px;
-            left: 15px;
-            right: 15px;
+            top: 10px;
+            left: 10px;
+            right: 10px;
             display: flex;
             justify-content: space-between;
             pointer-events: none;
             font-weight: bold;
-            font-size: 14px;
-            color: #111;
+            font-size: 12px;
+            color: #000;
         }
 
         .bar-container {
-            width: 42%;
+            width: 100%;
             background: #eee;
             border: 2px solid #000;
-            height: 18px;
-            position: relative;
+            height: 14px;
+            margin-top: 2px;
         }
 
         .bar-fill {
@@ -69,27 +73,26 @@
             background: #ff4444;
         }
 
-        /* Mobile Controls */
-        #controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
+        /* 하단 컨트롤 영역 (게임 화면 바로 아래) */
+        #controls-area {
             width: 100%;
-            height: 100%;
-            pointer-events: none;
+            max-width: 450px;
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            box-sizing: border-box;
         }
 
-        /* Joystick */
+        /* 가상 조이스틱 */
         #joystick-zone {
-            position: absolute;
-            bottom: 30px;
-            left: 30px;
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            background: rgba(0, 0, 0, 0.05);
-            border: 2px dashed #bbb;
-            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.03);
+            border: 2px dashed #999;
+            position: relative;
             touch-action: none;
         }
 
@@ -97,68 +100,67 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 50px;
-            height: 50px;
-            margin-top: -25px;
-            margin-left: -25px;
+            width: 40px;
+            height: 40px;
+            margin-top: -20px;
+            margin-left: -20px;
             border-radius: 50%;
-            background: #111;
-            border: 2px solid #000;
+            background: #000;
         }
 
-        /* Buttons */
+        /* 액션 버튼 그룹 */
         .btn-group {
-            position: absolute;
-            bottom: 30px;
-            right: 25px;
             display: flex;
-            gap: 15px;
-            pointer-events: auto;
+            gap: 10px;
+            align-items: center;
         }
 
         .action-btn {
-            width: 65px;
-            height: 65px;
+            width: 55px;
+            height: 55px;
             border-radius: 50%;
-            background: #ffffff;
-            border: 3px solid #111;
-            color: #111;
+            background: #fff;
+            border: 3px solid #000;
+            color: #000;
             font-weight: 900;
-            font-size: 16px;
+            font-size: 13px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 0 #111;
+            box-shadow: 0 4px 0 #000;
             touch-action: manipulation;
         }
 
         .action-btn:active {
             transform: translateY(4px);
-            box-shadow: 0 0 0 #111;
-            background: #111;
+            box-shadow: 0 0 0 #000;
+            background: #000;
             color: #fff;
         }
 
-        .btn-atk { width: 75px; height: 75px; font-size: 18px; }
+        .btn-atk { width: 65px; height: 65px; font-size: 15px; }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <canvas id="gameCanvas"></canvas>
+    <!-- 정사각형 게임 화면 컨테이너 -->
+    <div id="game-wrapper">
+        <canvas id="gameCanvas"></canvas>
 
-    <div id="hud">
-        <div style="width: 45%;">
-            PLAYER
-            <div class="bar-container"><div id="player-hp" class="bar-fill"></div></div>
-        </div>
-        <div style="width: 45%; text-align: right;">
-            DUMMY
-            <div class="bar-container" style="margin-left: auto;"><div id="dummy-hp" class="bar-fill dummy-bar"></div></div>
+        <div id="hud">
+            <div style="width: 42%;">
+                PLAYER
+                <div class="bar-container"><div id="player-hp" class="bar-fill"></div></div>
+            </div>
+            <div style="width: 42%; text-align: right;">
+                DUMMY
+                <div class="bar-container"><div id="dummy-hp" class="bar-fill dummy-bar"></div></div>
+            </div>
         </div>
     </div>
 
-    <div id="controls">
+    <!-- 게임 화면 바로 아래에 위치하는 컨트롤 영역 -->
+    <div id="controls-area">
         <div id="joystick-zone">
             <div id="joystick-knob"></div>
         </div>
@@ -168,27 +170,37 @@
             <button class="action-btn btn-atk" id="btn-atk">ATK</button>
         </div>
     </div>
-</div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const wrapper = document.getElementById('game-wrapper');
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+// --- 정사각형 화면 크기 조절 ---
+let size = 300;
+function resizeGame() {
+    // 화면 너비/높이에 맞춰 알맞은 정사각형 크기 결정
+    size = Math.min(window.innerWidth - 20, window.innerHeight * 0.55);
+    size = Math.max(280, Math.min(size, 450)); // 최소 280, 최대 450
+    wrapper.style.width = size + 'px';
+    wrapper.style.height = size + 'px';
+    canvas.width = size;
+    canvas.height = size;
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+window.addEventListener('resize', resizeGame);
+resizeGame();
 
-// --- 입력 처리 (가상 조이스틱 & 터치) ---
-const input = { x: 0, y: 0, atk: false, skill: false, jump: false };
+// --- 2D 물리 및 바닥 설정 ---
+const GROUND_Y = size * 0.8;
+
+// --- 입력 처리 ---
+const input = { x: 0, atk: false, skill: false, jump: false };
 
 const joyZone = document.getElementById('joystick-zone');
 const joyKnob = document.getElementById('joystick-knob');
 let joyActive = false;
 let joyStart = { x: 0, y: 0 };
-const joyMaxRadius = 40;
+const joyMaxRadius = 35;
 
 joyZone.addEventListener('touchstart', (e) => {
     joyActive = true;
@@ -211,26 +223,21 @@ window.addEventListener('touchmove', (e) => {
 window.addEventListener('touchend', () => {
     joyActive = false;
     input.x = 0;
-    input.y = 0;
     joyKnob.style.transform = `translate(0px, 0px)`;
 });
 
 function updateJoystick(touch) {
     let dx = touch.clientX - joyStart.x;
-    let dy = touch.clientY - joyStart.y;
-    let dist = Math.hypot(dx, dy);
+    let dist = Math.abs(dx);
 
     if (dist > joyMaxRadius) {
         dx = (dx / dist) * joyMaxRadius;
-        dy = (dy / dist) * joyMaxRadius;
     }
 
-    joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    joyKnob.style.transform = `translate(${dx}px, 0px)`;
     input.x = dx / joyMaxRadius;
-    input.y = dy / joyMaxRadius;
 }
 
-// 버튼 입력
 function bindBtn(id, key) {
     const btn = document.getElementById(id);
     btn.addEventListener('touchstart', (e) => { e.preventDefault(); input[key] = true; });
@@ -240,98 +247,74 @@ bindBtn('btn-atk', 'atk');
 bindBtn('btn-skill', 'skill');
 bindBtn('btn-jump', 'jump');
 
-// --- 게임 객체 정의 ---
-const GROUND_Y = canvas.height * 0.7;
-
-class Entity {
-    constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.z = 0; // 높이 (2.5D 점프용)
-        this.vz = 0;
-        this.width = 32;
-        this.height = 48;
-        this.color = color;
+// --- 캐릭터 및 더미 클래스 ---
+class Player {
+    constructor() {
+        this.width = 24;
+        this.height = 40;
+        this.x = size * 0.25;
+        this.y = GROUND_Y - this.height;
+        this.vx = 0;
+        this.vy = 0;
+        this.speed = 3;
         this.facing = 1; // 1: 우, -1: 좌
-        this.hp = 100;
-        this.maxHp = 100;
         this.isGrounded = true;
-    }
-
-    drawShadow() {
-        ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.beginPath();
-        let scale = Math.max(0.2, 1 - this.z / 150);
-        ctx.ellipse(this.x, this.y, (this.width / 2) * scale, 8 * scale, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-}
-
-class Player extends Entity {
-    constructor(x, y) {
-        super(x, y, '#111');
-        this.speed = 3.5;
-        this.state = 'idle'; // idle, move, attack, skill
-        this.animTimer = 0;
-        this.combo = 0;
+        this.state = 'idle';
         this.atkTimer = 0;
         this.weaponAngle = 0;
+        this.animTimer = 0;
     }
 
     update() {
-        // 이동 (2D 평면 움직임)
+        // 2D 좌우 이동
         if (this.state !== 'attack' && this.state !== 'skill') {
             this.x += input.x * this.speed;
-            this.y += input.y * this.speed * 0.6; // Y축은 깊이감을 위해 살짝 둔하게
-            
-            // 화면 제한
-            this.x = Math.max(30, Math.min(canvas.width - 30, this.x));
-            this.y = Math.max(canvas.height * 0.4, Math.min(canvas.height - 40, this.y));
-
-            if (input.x !== 0) this.facing = input.x > 0 ? 1 : -1;
+            if (Math.abs(input.x) > 0.1) {
+                this.facing = input.x > 0 ? 1 : -1;
+            }
         }
 
-        // 점프
+        // 2D 점프
         if (input.jump && this.isGrounded) {
-            this.vz = 10;
+            this.vy = -9;
             this.isGrounded = false;
+            input.jump = false;
         }
 
-        // 중력 처리 (Z축)
+        // 2D 중력
+        this.y += this.vy;
         if (!this.isGrounded) {
-            this.z += this.vz;
-            this.vz -= 0.6;
-            if (this.z <= 0) {
-                this.z = 0;
-                this.vz = 0;
+            this.vy += 0.5;
+            if (this.y >= GROUND_Y - this.height) {
+                this.y = GROUND_Y - this.height;
+                this.vy = 0;
                 this.isGrounded = true;
             }
         }
 
-        // 일반 공격
+        // 화면 밖 제한
+        this.x = Math.max(10, Math.min(size - this.width - 10, this.x));
+
+        // 공격 및 스킬 (2.5D 이펙트 트리거)
         if (input.atk && this.atkTimer === 0) {
             this.state = 'attack';
-            this.atkTimer = 15;
-            this.weaponAngle = -Math.PI / 2;
-            createHitbox(this.x + this.facing * 40, this.y, this.z, 50, 10);
-            input.atk = false; // 단발 입력
+            this.atkTimer = 12;
+            this.weaponAngle = -Math.PI / 3;
+            triggerHitbox(this.x + (this.facing === 1 ? this.width + 10 : -30), this.y + 10, 35, 10, false);
+            input.atk = false;
         }
 
-        // 필살기 (2.5D 스핀 어택)
         if (input.skill && this.atkTimer === 0) {
             this.state = 'skill';
-            this.atkTimer = 30;
-            createHitbox(this.x, this.y, this.z, 90, 25, true);
+            this.atkTimer = 24;
+            triggerHitbox(this.x + this.width / 2, this.y + this.height / 2, 60, 25, true);
             input.skill = false;
         }
 
-        // 타이머 및 상태 업데이트
         if (this.atkTimer > 0) {
             this.atkTimer--;
             if (this.state === 'attack') {
-                this.weaponAngle += (Math.PI / 10) * this.facing;
+                this.weaponAngle += (Math.PI / 6) * this.facing;
             } else if (this.state === 'skill') {
                 this.weaponAngle += Math.PI / 3;
             }
@@ -342,243 +325,211 @@ class Player extends Entity {
     }
 
     draw() {
-        this.drawShadow();
-
-        const renderY = this.y - this.z;
-
         ctx.save();
-        ctx.translate(this.x, renderY);
+        ctx.translate(this.x + this.width / 2, this.y + this.height);
 
-        // --- 캐릭터 픽셀 아트 본체 (검은 윤곽선 강조) ---
-        ctx.lineWidth = 3;
+        // 2D 순수 도트 캐릭터 (검은 윤곽선)
+        ctx.lineWidth = 2;
         ctx.strokeStyle = '#000000';
-        ctx.fillStyle = '#ffffff';
 
         // 머리
-        ctx.fillRect(-10, -42, 20, 20);
-        ctx.strokeRect(-10, -42, 20, 20);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-8, -38, 16, 16);
+        ctx.strokeRect(-8, -38, 16, 16);
 
         // 눈 (도트)
-        ctx.fillStyle = '#000';
-        let eyeOffset = this.facing === 1 ? 2 : -6;
-        ctx.fillRect(eyeOffset, -36, 4, 4);
+        ctx.fillStyle = '#000000';
+        let eyePos = this.facing === 1 ? 2 : -5;
+        ctx.fillRect(eyePos, -33, 3, 3);
 
         // 몸통
-        ctx.fillStyle = '#111111';
-        let bob = Math.sin(this.animTimer * 0.2) * (input.x || input.y ? 3 : 1);
-        ctx.fillRect(-8, -22 + bob, 16, 22);
-        ctx.strokeRect(-8, -22 + bob, 16, 22);
+        let legOffset = Math.sin(this.animTimer * 0.3) * (Math.abs(input.x) > 0.1 ? 3 : 0);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(-6, -22, 12, 14);
 
-        // 다리
+        // 다리 (2D)
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(-7, 0, 5, 8);
-        ctx.strokeRect(-7, 0, 5, 8);
-        ctx.fillRect(2, 0, 5, 8);
-        ctx.strokeRect(2, 0, 5, 8);
+        ctx.fillRect(-5 + legOffset, -8, 4, 8);
+        ctx.strokeRect(-5 + legOffset, -8, 4, 8);
+        ctx.fillRect(1 - legOffset, -8, 4, 8);
+        ctx.strokeRect(1 - legOffset, -8, 4, 8);
 
-        // --- 2.5D 입체 무기 (검) 렌더링 ---
+        // 무기 (기본)
         ctx.save();
-        ctx.translate(0, -15); // 손 위치
+        ctx.translate(0, -15);
         if (this.state === 'attack' || this.state === 'skill') {
             ctx.rotate(this.weaponAngle);
         } else {
-            ctx.rotate((this.facing * Math.PI) / 6);
+            ctx.rotate((this.facing * Math.PI) / 4);
         }
 
-        // 검 자루 및 날
         ctx.fillStyle = '#000';
-        ctx.fillRect(0, -4, 4, 8); // 자루
+        ctx.fillRect(0, -2, 3, 5);
         ctx.fillStyle = '#fff';
-        ctx.fillRect(4, -3, 28, 6); // 칼날
-        ctx.strokeRect(4, -3, 28, 6);
-
-        // 2.5D 검 궤적 잔상 (Attack / Skill 시)
-        if (this.state === 'attack' || this.state === 'skill') {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.beginPath();
-            ctx.arc(0, 0, 35, -Math.PI / 4, Math.PI / 4);
-            ctx.fill();
-        }
+        ctx.fillRect(3, -2, 20, 4);
+        ctx.strokeRect(3, -2, 20, 4);
         ctx.restore();
 
         ctx.restore();
     }
 }
 
-class Dummy extends Entity {
-    constructor(x, y) {
-        super(x, y, '#555');
+class Dummy {
+    constructor() {
+        this.width = 24;
+        this.height = 40;
+        this.x = size * 0.7;
+        this.y = GROUND_Y - this.height;
+        this.hp = 100;
+        this.maxHp = 100;
         this.hitTimer = 0;
         this.vx = 0;
-        this.vy = 0;
     }
 
     update() {
-        // 복귀 및 감쇄
+        // 2D 넉백 및 감쇄
         this.x += this.vx;
-        this.y += this.vy;
         this.vx *= 0.8;
-        this.vy *= 0.8;
-
-        // 경계
-        this.x = Math.max(50, Math.min(canvas.width - 50, this.x));
-        this.y = Math.max(canvas.height * 0.4, Math.min(canvas.height - 40, this.y));
+        this.x = Math.max(size * 0.4, Math.min(size - this.width - 10, this.x));
 
         if (this.hitTimer > 0) this.hitTimer--;
 
-        // 체력 리젠 (연습용 더미)
+        // HP 자동 회복
         if (this.hp < this.maxHp && this.hitTimer === 0) {
             this.hp += 0.2;
         }
 
-        // UI 업데이트
         document.getElementById('dummy-hp').style.width = `${(this.hp / this.maxHp) * 100}%`;
     }
 
     draw() {
-        this.drawShadow();
-
         ctx.save();
-        ctx.translate(this.x, this.y);
+        let shake = this.hitTimer > 0 ? (Math.random() - 0.5) * 4 : 0;
+        ctx.translate(this.x + shake, this.y);
 
-        // 피격 시 붉은 셰이더 및 흔들림
-        let shake = this.hitTimer > 0 ? (Math.random() - 0.5) * 6 : 0;
-        ctx.translate(shake, 0);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000';
+        ctx.fillStyle = this.hitTimer > 0 ? '#ff4444' : '#eee';
 
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#000000';
-        ctx.fillStyle = this.hitTimer > 0 ? '#ff4444' : '#eeeeee';
+        // 2D 더미 샌드백
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.strokeRect(0, 0, this.width, this.height);
 
-        // 샌드백 타입 더미 몸통 (도트 스타일)
-        ctx.fillRect(-12, -45, 24, 45);
-        ctx.strokeRect(-12, -45, 24, 45);
-
-        // 더미 무늬 (X 표시)
+        // X 표시
         ctx.beginPath();
-        ctx.moveTo(-6, -35); ctx.lineTo(6, -25);
-        ctx.moveTo(6, -35); ctx.lineTo(-6, -25);
+        ctx.moveTo(6, 10); ctx.lineTo(18, 20);
+        ctx.moveTo(18, 10); ctx.lineTo(6, 20);
         ctx.stroke();
-
-        // 받침대
-        ctx.fillStyle = '#111';
-        ctx.fillRect(-16, -3, 32, 6);
 
         ctx.restore();
     }
 }
 
-// --- 이펙트 및 히트박스 시스템 ---
+// --- 2.5D 이펙트 연출 시스템 ---
 const particles = [];
-const hitboxes = [];
+const fxRings = [];
 
-function createHitbox(x, y, z, range, damage, isSpin = false) {
-    hitboxes.push({ x, y, z, range, damage, life: 3 });
+function triggerHitbox(x, y, range, damage, isSpin) {
+    // 더미 피격 체크
+    let dx = (dummy.x + dummy.width / 2) - x;
+    let dy = (dummy.y + dummy.height / 2) - y;
+    let dist = Math.hypot(dx, dy);
 
-    // 2.5D 타격 파티클 생성
+    if (dist < range) {
+        dummy.hp = Math.max(0, dummy.hp - damage);
+        dummy.hitTimer = 8;
+        dummy.vx = player.facing * 5;
+    }
+
+    // [2.5D 이펙트 1] 입체 원형 스핀 링 (타원/Perspective 변형 연출)
+    if (isSpin) {
+        fxRings.push({ x, y, radius: 10, maxRadius: 45, alpha: 1, angleX: 1.2 });
+    }
+
+    // [2.5D 이펙트 2] 3D 파티클 팝업 (Z축 깊이 방향 스파크)
     for (let i = 0; i < (isSpin ? 16 : 8); i++) {
-        let angle = isSpin ? (Math.PI * 2 * i) / 16 : Math.atan2(y, x) + (Math.random() - 0.5);
+        let angle = (Math.PI * 2 * i) / (isSpin ? 16 : 8);
+        let speed = Math.random() * 4 + 2;
         particles.push({
-            x: x,
-            y: y - z,
-            vx: Math.cos(angle) * (Math.random() * 6 + 2),
-            vy: Math.sin(angle) * (Math.random() * 6 + 2),
-            size: Math.random() * 6 + 3,
-            life: 15
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed * 0.5, // 2.5D 입체감을 위해 Y축 속도 조절
+            vz: Math.random() * 3 + 1, // Z축 높이
+            z: 0,
+            size: Math.random() * 4 + 2,
+            life: 14
         });
     }
 }
 
-function updateEffects() {
-    // 히트박스 연산
-    for (let i = hitboxes.length - 1; i >= 0; i--) {
-        let hb = hitboxes[i];
-        
-        // 더미와의 거리 계산 (2.5D Y축 깊이 반영)
-        let dx = dummy.x - hb.x;
-        let dy = (dummy.y - hb.y) * 2; // Y축 가중치로 입체감 형성
-        let dist = Math.hypot(dx, dy);
+function updateAndDraw25DEffects() {
+    // 2.5D 스핀 링 렌더링
+    for (let i = fxRings.length - 1; i >= 0; i--) {
+        let ring = fxRings[i];
+        ctx.save();
+        ctx.translate(ring.x, ring.y);
+        ctx.scale(1, 0.4); // Y축 축소로 2.5D 타원 시점 형성
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = `rgba(0, 0, 0, ${ring.alpha})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, ring.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
 
-        if (dist < hb.range && Math.abs(dummy.z - hb.z) < 30) {
-            dummy.hp = Math.max(0, dummy.hp - hb.damage);
-            dummy.hitTimer = 10;
-            dummy.vx = player.facing * 8; // 넉백
-            dummy.vy = (Math.random() - 0.5) * 3;
-            hitboxes.splice(i, 1);
-            continue;
-        }
-
-        hb.life--;
-        if (hb.life <= 0) hitboxes.splice(i, 1);
+        ring.radius += 3;
+        ring.alpha -= 0.08;
+        if (ring.alpha <= 0) fxRings.splice(i, 1);
     }
 
-    // 파티클 업데이트
+    // 2.5D 입체 파티클 렌더링
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
+        p.z += p.vz;
+        p.vz -= 0.3; // Gravity for particle Z height
         p.life--;
+
+        // Z축 높이를 반영한 Y 위치 투영
+        let renderY = p.y - p.z;
+
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(p.x, renderY, p.size, p.size);
+
         if (p.life <= 0) particles.splice(i, 1);
     }
 }
 
-function drawEffects() {
-    // 파티클 렌더링
-    particles.forEach(p => {
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(p.x, p.y, p.size, p.size);
-    });
-}
+// --- 단순 2D 배경 ---
+function draw2DBackground() {
+    ctx.clearRect(0, 0, size, size);
 
-// --- 단순화된 배경 그리드/기준선 ---
-function drawSimpleBackground() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 단순한 지면 구분선 (2.5D 스테이지 깊이감 수평선)
-    ctx.strokeStyle = '#e0e0e0';
+    // 단순 바닥 수평선 (2D 전용)
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2;
-
-    let startY = canvas.height * 0.4;
-    let endY = canvas.height - 40;
-
-    // 수평선 3줄만 배치하여 극한의 단순함 연출
     ctx.beginPath();
-    ctx.moveTo(0, startY); ctx.lineTo(canvas.width, startY);
-    ctx.moveTo(0, endY); ctx.lineTo(canvas.width, endY);
+    ctx.moveTo(0, GROUND_Y);
+    ctx.lineTo(size, GROUND_Y);
     ctx.stroke();
-
-    // 점선 스타일의 Y축 격자선
-    ctx.setLineDash([5, 15]);
-    ctx.beginPath();
-    ctx.moveTo(0, (startY + endY) / 2);
-    ctx.lineTo(canvas.width, (startY + endY) / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
 }
 
-// --- 메인 루프 ---
-const player = new Player(canvas.width * 0.3, canvas.height * 0.6);
-const dummy = new Dummy(canvas.width * 0.7, canvas.height * 0.6);
+// --- 루프 ---
+const player = new Player();
+const dummy = new Dummy();
 
-function gameLoop() {
-    // 1. 업데이트
+function loop() {
     player.update();
     dummy.update();
-    updateEffects();
 
-    // 2. 렌더링
-    drawSimpleBackground();
+    draw2DBackground();
+    dummy.draw();
+    player.draw();
+    updateAndDraw25DEffects();
 
-    // 2.5D Y-sorting (Y 좌표 기준 렌더링 순서 정렬)
-    const renderList = [player, dummy];
-    renderList.sort((a, b) => a.y - b.y);
-
-    renderList.forEach(obj => obj.draw());
-    drawEffects();
-
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(loop);
 }
 
-gameLoop();
+loop();
 </script>
 </body>
 </html>
