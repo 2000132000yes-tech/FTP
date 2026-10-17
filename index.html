@@ -29,12 +29,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #4b8b3b;
+            background: #3e7330;
         }
 
         canvas {
             display: block;
-            background: #5b9e4b;
+            background: #538d43;
         }
 
         /* Roblox Top Bar */
@@ -189,9 +189,9 @@
         }
 
         .vertical-item-card button {
-            background: #00a2ff;
+            background: #4a4d52;
             color: white;
-            border: none;
+            border: 1px solid #686c73;
             padding: 6px 12px;
             border-radius: 6px;
             font-weight: bold;
@@ -199,8 +199,14 @@
             font-size: 12px;
         }
 
+        .vertical-item-card button:hover {
+            background: #5d6168;
+        }
+
         .vertical-item-card button:disabled {
-            background: #555;
+            background: #333;
+            border-color: #444;
+            color: #777;
             cursor: not-allowed;
         }
 
@@ -235,8 +241,8 @@
         }
 
         .hotbar-slot.active {
-            border-color: #ffeb3b;
-            background: rgba(255, 235, 59, 0.25);
+            border-color: #ffffff;
+            background: rgba(255, 255, 255, 0.3);
         }
 
         .hotbar-slot .num {
@@ -260,33 +266,38 @@
             font-weight: bold;
         }
 
-        /* 근접 상호작용 Prompt [E] */
-        #interaction-prompt {
+        /* 회색 계열 [E] 전용 버튼 */
+        #e-button-prompt {
             position: absolute;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.85);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 15px;
-            font-weight: bold;
             display: none;
-            align-items: center;
-            gap: 10px;
-            border: 2px solid #00a2ff;
-            z-index: 20;
+            background: rgba(45, 48, 53, 0.92);
+            color: #ffffff;
+            border: 2px solid #6e737d;
+            border-radius: 8px;
+            padding: 5px 12px;
+            font-size: 13px;
+            font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 25;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            transform: translate(-50%, -100%);
+            align-items: center;
+            gap: 6px;
+            transition: background 0.15s;
         }
 
-        #interaction-prompt .key-badge {
-            background: #00a2ff;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 13px;
+        #e-button-prompt:hover {
+            background: rgba(65, 70, 78, 0.98);
+            border-color: #8a909c;
+        }
+
+        #e-button-prompt .key-tag {
+            background: #50555e;
+            color: #ffffff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            border: 1px solid #737985;
         }
 
         /* Mobile Virtual Joystick */
@@ -321,7 +332,7 @@
             top: 65px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(30, 32, 35, 0.9);
             color: white;
             padding: 8px 18px;
             border-radius: 20px;
@@ -348,18 +359,16 @@
 
         <div id="toast">메시지</div>
 
-        <!-- Interaction Prompt Overlay (Computer E / Mobile Tap) -->
-        <div id="interaction-prompt" onclick="triggerInteraction()">
-            <span class="key-badge">E</span>
-            <span id="prompt-text">상점 열기</span>
+        <!-- 회색 계열 [E] 버튼 (대상 근처에 배치) -->
+        <div id="e-button-prompt" onclick="triggerInteraction()">
+            <span class="key-tag">E</span>
+            <span id="e-prompt-text">수확</span>
         </div>
 
         <canvas id="gameCanvas"></canvas>
 
         <!-- Hotbar (1~9 Slots) -->
-        <div class="hotbar-container" id="hotbar">
-            <!-- 9 Slots dynamically created -->
-        </div>
+        <div class="hotbar-container" id="hotbar"></div>
 
         <!-- Mobile Joystick -->
         <div id="virtual-joystick">
@@ -373,7 +382,7 @@
                 <button class="close-btn" onclick="toggleWindow('shop-window')">X</button>
             </div>
             <div style="padding: 8px 12px 0 12px; font-size: 11px; color: #aaa; text-align: right;">
-                재고 리셋까지: <span id="reset-timer" style="color:#ffeb3b; font-weight:bold;">60s</span>
+                재고 리셋까지: <span id="reset-timer" style="color:#d0d4dc; font-weight:bold;">60s</span>
             </div>
             <div class="window-body" id="shop-items-container"></div>
         </div>
@@ -395,7 +404,7 @@
             </div>
             <div class="window-body" id="sell-items-container"></div>
             <div style="padding: 10px;">
-                <button onclick="sellAllHarvested()" style="width:100%; padding: 10px; background: #28a745; color:white; border:none; border-radius: 8px; font-weight:bold; cursor:pointer;">모든 수확물 판매하기</button>
+                <button onclick="sellAllHarvested()" style="width:100%; padding: 10px; background: #4a4d52; color:white; border:1px solid #686c73; border-radius: 8px; font-weight:bold; cursor:pointer;">모든 수확물 판매하기</button>
             </div>
         </div>
     </div>
@@ -407,53 +416,73 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            // 경작지 구역 중앙 배치 재계산
+            if (farmField) {
+                farmField.x = canvas.width / 2 - 220;
+                farmField.y = canvas.height / 2 - 40;
+            }
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
 
         // Game State
         const state = {
             coins: 100,
-            activeSlot: 0, // 0~8 (Hotbar)
-            hotbar: Array(9).fill(null), // 핫바 슬롯
+            activeSlot: 0,
+            hotbar: Array(9).fill(null),
             inventory: {
-                seeds: { '해바라기 씨앗': 2 },
+                seeds: { '당근 씨앗': 3 },
                 crops: {}
             },
+            // 다양해진 작물 데이터 (단일 수확 & 다회 수확 작물 포함)
             seedsData: {
-                '해바라기 씨앗': { price: 15, growTime: 6, reward: 35, icon: '🌻', cropName: '해바라기' },
-                '장미 씨앗': { price: 30, growTime: 12, reward: 75, icon: '🌹', cropName: '장미' },
-                '토마토 씨앗': { price: 50, growTime: 18, reward: 130, icon: '🍅', cropName: '토마토' },
-                '황금사과 씨앗': { price: 120, growTime: 30, reward: 320, icon: '🍎', cropName: '황금사과' }
+                '당근 씨앗': { price: 10, growTime: 5, reward: 22, icon: '🥕', cropName: '당근', maxHarvests: 1 },
+                '해바라기 씨앗': { price: 15, growTime: 7, reward: 35, icon: '🌻', cropName: '해바라기', maxHarvests: 1 },
+                '옥수수 씨앗': { price: 25, growTime: 10, reward: 58, icon: '🌽', cropName: '옥수수', maxHarvests: 1 },
+                '딸기 씨앗': { price: 35, growTime: 12, reward: 28, icon: '🍓', cropName: '딸기', maxHarvests: 4 },
+                '토마토 씨앗': { price: 50, growTime: 15, reward: 38, icon: '🍅', cropName: '토마토', maxHarvests: 5 },
+                '가지 씨앗': { price: 65, growTime: 18, reward: 140, icon: '🍆', cropName: '가지', maxHarvests: 1 },
+                '수박 씨앗': { price: 90, growTime: 22, reward: 210, icon: '🍉', cropName: '수박', maxHarvests: 1 },
+                '블루베리 씨앗': { price: 110, growTime: 25, reward: 60, icon: '🫐', cropName: '블루베리', maxHarvests: 6 },
+                '황금사과 씨앗': { price: 160, growTime: 30, reward: 420, icon: '🍎', cropName: '황금사과', maxHarvests: 1 }
             },
             shopStock: {},
             resetTimeLeft: 60
         };
 
-        // 자유 배치된 식물 리스트
-        const plantedCrops = [];
-
-        // 상점 & 판매 건물 영역 (Map Objects)
-        const zones = {
-            shop: { x: 180, y: 150, radius: 60, title: '상점', color: '#ff9f43' },
-            sell: { x: 450, y: 150, radius: 60, title: '판매 구역', color: '#10ac84' }
+        // 경작지 (심는 구역, 텍스트 없이 깔끔한 흙밭)
+        const farmField = {
+            x: window.innerWidth / 2 - 220,
+            y: window.innerHeight / 2 - 40,
+            width: 440,
+            height: 300
         };
 
-        // 로블록스 플레이어 캐릭터
+        // 심어진 작물 리스트
+        const plantedCrops = [];
+
+        // 건물 모델링 영역
+        const zones = {
+            shop: { x: 180, y: 150, width: 100, height: 80, title: '상점' },
+            sell: { x: 420, y: 150, width: 100, height: 80, title: '판매소' }
+        };
+
+        // 로블록스 캐릭터
         const player = {
-            x: canvas.width / 2,
-            y: canvas.height / 2 + 100,
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2 + 180,
             size: 28,
             speed: 3.5,
             walkCycle: 0,
             isMoving: false,
-            nearTarget: null // 'shop', 'sell', or Crop Object
+            nearTarget: null
         };
 
-        // 재고 초기화 & 타이머
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 상점 재고 갱신
         function refreshShopStock() {
             for (let seed in state.seedsData) {
-                state.shopStock[seed] = Math.floor(Math.random() * 6) + 2; // 2~7개 랜덤 재고
+                state.shopStock[seed] = Math.floor(Math.random() * 6) + 2;
             }
             state.resetTimeLeft = 60;
             renderShop();
@@ -494,7 +523,7 @@
             initHotbar();
         }
 
-        // 키보드 입력을 통한 핫바 & B키 조작
+        // 키보드 조작
         const keys = {};
         window.addEventListener('keydown', e => {
             keys[e.code] = true;
@@ -513,7 +542,7 @@
         });
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // Mobile Joystick Setup
+        // Mobile Joystick
         const joystick = document.getElementById('virtual-joystick');
         const handle = document.getElementById('joystick-handle');
         let joyActive = false, joyVector = { x: 0, y: 0 }, joyCenter = { x: 0, y: 0 };
@@ -554,28 +583,40 @@
             joyVector = { x: dx / maxRadius, y: dy / maxRadius };
         }
 
-        // 클릭/터치로 자유로운 위치에 씨앗 심기
+        // 씨앗 심기 (심는 구역 제한 & 작물 간 겹침 방지)
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const clickY = e.clientY - rect.top;
 
-            // 상점/판매 영역 클릭 제외
-            if (Math.hypot(clickX - zones.shop.x, clickY - zones.shop.y) < zones.shop.radius ||
-                Math.hypot(clickX - zones.sell.x, clickY - zones.sell.y) < zones.sell.radius) return;
+            // 1. 심는 구역 내부인지 검사
+            if (clickX < farmField.x || clickX > farmField.x + farmField.width ||
+                clickY < farmField.y || clickY > farmField.y + farmField.height) {
+                return;
+            }
 
+            // 2. 작물 겹침 검사 (기존 작물과 최소 36px 거리 유지)
+            for (let crop of plantedCrops) {
+                if (Math.hypot(clickX - crop.x, clickY - crop.y) < 36) {
+                    showToast('작물이 너무 가깝습니다! 다른 위치에 심으세요.');
+                    return;
+                }
+            }
+
+            // 3. 핫바에서 선택된 씨앗 심기
             const currentItem = state.hotbar[state.activeSlot];
             if (currentItem && currentItem.type === 'seed' && currentItem.count > 0) {
-                // 심기 진행
+                const seedData = state.seedsData[currentItem.name];
                 plantedCrops.push({
-                    id: Date.now(),
+                    id: Date.now() + Math.random(),
                     x: clickX,
                     y: clickY,
                     seedName: currentItem.name,
-                    growTime: state.seedsData[currentItem.name].growTime,
+                    growTime: seedData.growTime,
                     plantedAt: Date.now(),
                     isReady: false,
-                    remaining: state.seedsData[currentItem.name].growTime
+                    remaining: seedData.growTime,
+                    harvestsLeft: seedData.maxHarvests || 1
                 });
 
                 currentItem.count--;
@@ -583,11 +624,11 @@
                     state.hotbar[state.activeSlot] = null;
                 }
                 initHotbar();
-                showToast(`${currentItem.name}을(를) 정원에 심었습니다!`);
+                showToast(`${currentItem.name}을(를) 심었습니다!`);
             }
         });
 
-        // E키 / 탭을 통한 상호작용
+        // E키 또는 E버튼 클릭을 통한 수확 및 창 열기
         function triggerInteraction() {
             if (!player.nearTarget) return;
 
@@ -596,23 +637,33 @@
             } else if (player.nearTarget === 'sell') {
                 toggleWindow('sell-window');
             } else if (typeof player.nearTarget === 'object') {
-                // 수확 처리
                 const cropObj = player.nearTarget;
                 const seedInfo = state.seedsData[cropObj.seedName];
                 
+                // 인벤토리 수확물 추가
                 state.inventory.crops[seedInfo.cropName] = (state.inventory.crops[seedInfo.cropName] || 0) + 1;
                 
-                // 정원에서 제거
-                const idx = plantedCrops.findIndex(c => c.id === cropObj.id);
-                if (idx !== -1) plantedCrops.splice(idx, 1);
+                cropObj.harvestsLeft--;
 
-                showToast(`${seedInfo.cropName} 수확 완료! (인벤토리에 추가됨)`);
+                if (cropObj.harvestsLeft > 0) {
+                    // 다회 수확 작물: 다시 자람 상태로 리셋
+                    cropObj.plantedAt = Date.now();
+                    cropObj.isReady = false;
+                    cropObj.remaining = seedInfo.growTime;
+                    showToast(`${seedInfo.cropName} 수확 완료! (남은 수확 횟수: ${cropObj.harvestsLeft}회)`);
+                } else {
+                    // 수확 횟수 소진 시 제거
+                    const idx = plantedCrops.findIndex(c => c.id === cropObj.id);
+                    if (idx !== -1) plantedCrops.splice(idx, 1);
+                    showToast(`${seedInfo.cropName} 수확 완료! (인벤토리에 저장됨)`);
+                }
+
                 player.nearTarget = null;
-                updatePrompt();
+                updatePromptPosition();
             }
         }
 
-        // 세로형 상점 렌더링
+        // 세로형 상점 UI
         function renderShop() {
             const container = document.getElementById('shop-items-container');
             container.innerHTML = '';
@@ -626,7 +677,7 @@
                         <div class="icon">${data.icon}</div>
                         <div class="details">
                             <span class="name">${seed}</span>
-                            <span class="sub">가격: ${data.price}G | 재고: ${stock}개</span>
+                            <span class="sub">가격: ${data.price}G | 재고: ${stock}개 ${data.maxHarvests > 1 ? `(${data.maxHarvests}회 수확)` : ''}</span>
                         </div>
                     </div>
                     <button ${stock <= 0 ? 'disabled' : ''} onclick="buySeed('${seed}')">
@@ -643,7 +694,6 @@
                 state.coins -= price;
                 state.shopStock[seedName]--;
                 
-                // 핫바 또는 인벤토리에 추가
                 addToHotbarOrInventory('seed', seedName, state.seedsData[seedName].icon);
                 
                 updateUI();
@@ -655,7 +705,6 @@
         }
 
         function addToHotbarOrInventory(type, name, icon) {
-            // 핫바 빈자리 탐색
             let emptySlot = state.hotbar.findIndex(slot => slot && slot.name === name);
             if (emptySlot !== -1) {
                 state.hotbar[emptySlot].count++;
@@ -664,19 +713,17 @@
                 if (nullSlot !== -1) {
                     state.hotbar[nullSlot] = { type, name, icon, count: 1 };
                 } else {
-                    // 인벤토리로 이동
                     state.inventory.seeds[name] = (state.inventory.seeds[name] || 0) + 1;
                 }
             }
             initHotbar();
         }
 
-        // 인벤토리 세로형 렌더링
+        // 인벤토리 UI
         function renderInventory() {
             const container = document.getElementById('inventory-items-container');
             container.innerHTML = '';
 
-            // 씨앗
             for (let [seed, count] of Object.entries(state.inventory.seeds)) {
                 if (count <= 0) continue;
                 const data = state.seedsData[seed];
@@ -687,7 +734,7 @@
                         <div class="icon">${data.icon}</div>
                         <div class="details">
                             <span class="name">${seed}</span>
-                            <span class="sub">수량: ${count}개</span>
+                            <span class="sub">보유: ${count}개</span>
                         </div>
                     </div>
                     <button onclick="equipSeedToHotbar('${seed}')">핫바 장착</button>
@@ -695,20 +742,19 @@
                 container.appendChild(card);
             }
 
-            // 수확물
             for (let [crop, count] of Object.entries(state.inventory.crops)) {
                 if (count <= 0) continue;
                 const card = document.createElement('div');
                 card.className = 'vertical-item-card';
                 card.innerHTML = `
                     <div class="item-info">
-                        <div class="icon">🌾</div>
+                        <div class="icon">📦</div>
                         <div class="details">
                             <span class="name">${crop}</span>
-                            <span class="sub">수량: ${count}개</span>
+                            <span class="sub">보유: ${count}개</span>
                         </div>
                     </div>
-                    <span style="font-size:12px; color:#aaa;">판매 가능</span>
+                    <span style="font-size:11px; color:#aaa;">판매소 이용 가능</span>
                 `;
                 container.appendChild(card);
             }
@@ -723,7 +769,7 @@
             }
         }
 
-        // 판매 창 렌더링
+        // 판매소 UI
         function renderSell() {
             const container = document.getElementById('sell-items-container');
             container.innerHTML = '';
@@ -733,7 +779,6 @@
                 if (count <= 0) continue;
                 hasCrops = true;
 
-                // 씨앗 데이터에서 가격 매칭
                 const seedKey = Object.keys(state.seedsData).find(k => state.seedsData[k].cropName === cropName);
                 const reward = seedKey ? state.seedsData[seedKey].reward : 20;
 
@@ -741,7 +786,7 @@
                 card.className = 'vertical-item-card';
                 card.innerHTML = `
                     <div class="item-info">
-                        <div class="icon">📦</div>
+                        <div class="icon">🌾</div>
                         <div class="details">
                             <span class="name">${cropName}</span>
                             <span class="sub">개당 ${reward}G | 보유: ${count}개</span>
@@ -792,7 +837,6 @@
             const win = document.getElementById(windowId);
             const isActive = win.classList.contains('active');
 
-            // 모든 창 닫기
             document.querySelectorAll('.roblox-window').forEach(w => w.classList.remove('active'));
 
             if (!isActive) {
@@ -814,22 +858,38 @@
             setTimeout(() => toast.style.opacity = '0', 2200);
         }
 
-        // 근접 시 프롬프트 UI 업데이트
-        function updatePrompt() {
-            const prompt = document.getElementById('interaction-prompt');
-            const promptText = document.getElementById('prompt-text');
+        // 대상 옆에 회색 [E] 버튼 위치 동적 지정
+        function updatePromptPosition() {
+            const btn = document.getElementById('e-button-prompt');
+            const textEl = document.getElementById('e-prompt-text');
 
             if (player.nearTarget) {
-                prompt.style.display = 'flex';
-                if (player.nearTarget === 'shop') promptText.innerText = '상점 열기';
-                else if (player.nearTarget === 'sell') promptText.innerText = '판매소 열기';
-                else if (typeof player.nearTarget === 'object') promptText.innerText = `${state.seedsData[player.nearTarget.seedName].cropName} 수확하기`;
+                let targetX = 0, targetY = 0, label = '수확';
+
+                if (player.nearTarget === 'shop') {
+                    targetX = zones.shop.x + zones.shop.width / 2 + 35;
+                    targetY = zones.shop.y;
+                    label = '상점';
+                } else if (player.nearTarget === 'sell') {
+                    targetX = zones.sell.x + zones.sell.width / 2 + 35;
+                    targetY = zones.sell.y;
+                    label = '판매소';
+                } else if (typeof player.nearTarget === 'object') {
+                    targetX = player.nearTarget.x + 24;
+                    targetY = player.nearTarget.y;
+                    label = '수확';
+                }
+
+                btn.style.left = `${targetX}px`;
+                btn.style.top = `${targetY}px`;
+                btn.style.display = 'flex';
+                textEl.innerText = label;
             } else {
-                prompt.style.display = 'none';
+                btn.style.display = 'none';
             }
         }
 
-        // 메인 업데이트 루프
+        // 게임 메인 업데이트
         function update() {
             let dx = 0, dy = 0;
             if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
@@ -851,25 +911,27 @@
                 player.walkCycle += 0.2;
             }
 
-            // Canvas Boundary
             player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
             player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
 
-            // 충돌/거리 감지 (상점, 판매소, 근처 수확 작물)
+            // 실시간 성장 상태 계산
+            const now = Date.now();
+            plantedCrops.forEach(crop => {
+                const elapsed = (now - crop.plantedAt) / 1000;
+                crop.remaining = Math.max(0, Math.ceil(crop.growTime - elapsed));
+                crop.isReady = crop.remaining <= 0;
+                crop.growthRatio = Math.min(1, elapsed / crop.growTime); // 0.0 ~ 1.0 실시간 성장율
+            });
+
+            // 근접 대상 감지
             let newTarget = null;
 
-            if (Math.hypot(player.x - zones.shop.x, player.y - zones.shop.y) < zones.shop.radius) {
+            if (Math.hypot(player.x - (zones.shop.x + zones.shop.width/2), player.y - (zones.shop.y + zones.sell.height/2)) < 65) {
                 newTarget = 'shop';
-            } else if (Math.hypot(player.x - zones.sell.x, player.y - zones.sell.y) < zones.sell.radius) {
+            } else if (Math.hypot(player.x - (zones.sell.x + zones.sell.width/2), player.y - (zones.sell.y + zones.sell.height/2)) < 65) {
                 newTarget = 'sell';
             } else {
-                // 다 자란 작물 근처 확인
-                const now = Date.now();
                 for (let crop of plantedCrops) {
-                    const elapsed = (now - crop.plantedAt) / 1000;
-                    crop.remaining = Math.max(0, Math.ceil(crop.growTime - elapsed));
-                    crop.isReady = crop.remaining <= 0;
-
                     if (crop.isReady && Math.hypot(player.x - crop.x, player.y - crop.y) < 35) {
                         newTarget = crop;
                         break;
@@ -877,69 +939,95 @@
                 }
             }
 
-            if (player.nearTarget !== newTarget) {
-                player.nearTarget = newTarget;
-                updatePrompt();
-            }
+            player.nearTarget = newTarget;
+            updatePromptPosition();
         }
 
-        // Rendering Loop
+        // 그래픽 렌더링
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Draw Zones (상점 & 판매 건물 영역)
+            // 1. 경작지 구역 (텍스트 없이 깔끔한 흙밭 토지)
+            ctx.fillStyle = '#4a2f1b';
+            ctx.beginPath();
+            ctx.roundRect(farmField.x, farmField.y, farmField.width, farmField.height, 12);
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#362112';
+            ctx.stroke();
+
+            // 2. 상점/판매소 3D 로블록스 건물 모델링
             for (let [key, zone] of Object.entries(zones)) {
-                ctx.fillStyle = zone.color;
+                // 그림자
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillRect(zone.x + 5, zone.y + zone.height - 5, zone.width, 10);
+
+                // 본체
+                ctx.fillStyle = key === 'shop' ? '#2e3136' : '#282b30';
+                ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#4f545c';
+                ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
+
+                // 지붕
+                ctx.fillStyle = key === 'shop' ? '#40444b' : '#36393e';
                 ctx.beginPath();
-                ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+                ctx.moveTo(zone.x - 6, zone.y);
+                ctx.lineTo(zone.x + zone.width / 2, zone.y - 20);
+                ctx.lineTo(zone.x + zone.width + 6, zone.y);
+                ctx.closePath();
                 ctx.fill();
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
                 ctx.stroke();
 
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 16px sans-serif';
+                // 간판
+                ctx.fillStyle = '#1e2022';
+                ctx.fillRect(zone.x + 10, zone.y + 10, zone.width - 20, 24);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(zone.title, zone.x, zone.y + 5);
+                ctx.fillText(zone.title, zone.x + zone.width / 2, zone.y + 26);
             }
 
-            // 2. Draw Planted Crops (자유 배치 작물)
-            const now = Date.now();
+            // 3. 심어진 작물 (실시간 성장 모습)
             plantedCrops.forEach(crop => {
                 const seedData = state.seedsData[crop.seedName];
 
-                // Soil patch
-                ctx.fillStyle = '#654321';
+                // 흙 베이스
+                ctx.fillStyle = '#331e10';
                 ctx.beginPath();
-                ctx.arc(crop.x, crop.y, 16, 0, Math.PI * 2);
+                ctx.arc(crop.x, crop.y + 2, 14, 0, Math.PI * 2);
                 ctx.fill();
 
                 if (crop.isReady) {
-                    // Ready Harvest Icon
+                    // 다 자란 모습
                     ctx.font = '26px sans-serif';
                     ctx.textAlign = 'center';
                     ctx.fillText(seedData.icon, crop.x, crop.y + 6);
                 } else {
-                    // Growing Sprout
-                    ctx.font = '16px sans-serif';
+                    // 실시간 성장하는 싹 (크기 및 상태 변화)
+                    const scale = 0.4 + (crop.growthRatio * 0.6); // 40% ~ 100% 크기 성장
+                    ctx.save();
+                    ctx.translate(crop.x, crop.y);
+                    ctx.scale(scale, scale);
+                    ctx.font = '22px sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText('🌱', crop.x, crop.y + 4);
+                    ctx.fillText('🌱', 0, 6);
+                    ctx.restore();
 
-                    // 근처에 오면 남은 성장 시간 표시
-                    const distToPlayer = Math.hypot(player.x - crop.x, player.y - crop.y);
-                    if (distToPlayer < 90) {
-                        ctx.fillStyle = 'white';
+                    // 근처 접근 시 남은 성장 시간 표시
+                    if (Math.hypot(player.x - crop.x, player.y - crop.y) < 80) {
+                        ctx.fillStyle = '#ffffff';
                         ctx.font = 'bold 11px sans-serif';
-                        ctx.fillText(`${crop.remaining}초`, crop.x, crop.y - 18);
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${crop.remaining}초`, crop.x, crop.y - 16);
                     }
                 }
             });
 
-            // 3. Draw Roblox Character with Animation
+            // 4. 로블록스 캐릭터 렌더링
             drawRobloxCharacter(player.x, player.y, player);
         }
 
-        // 로블록스 캐릭터 (걷기 애니메이션 포함)
         function drawRobloxCharacter(x, y, p) {
             ctx.save();
             ctx.translate(x, y);
@@ -958,7 +1046,7 @@
             ctx.fillRect(2, 4 - legOffset, 7, 12);
 
             // Torso
-            ctx.fillStyle = '#007acc';
+            ctx.fillStyle = '#2b5278';
             ctx.fillRect(-12, -10, 24, 16);
 
             // Head
