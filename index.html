@@ -2,1073 +2,640 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Grow a Garden - Roblox Style</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>산업 엔지니어: 회로 & 경제 타이쿤</title>
     <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        :root {
+            --bg-color: #f1f5f9;
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --accent-blue: #2563eb;
+            --accent-green: #059669;
+            --accent-red: #dc2626;
+            --wire-on: #eab308;
+            --wire-off: #94a3b8;
         }
 
-        body, html {
-            width: 100%;
-            height: 100%;
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
             overflow: hidden;
-            background-color: #1a1a1a;
         }
 
-        #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
+        #sidebar {
+            width: 330px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
             display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #3e7330;
-        }
-
-        canvas {
-            display: block;
-            background: #538d43;
-        }
-
-        /* Roblox Top Bar */
-        .top-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 50px;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 15px;
+            flex-direction: column;
             z-index: 10;
-            backdrop-filter: blur(5px);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
         }
 
-        .top-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            color: white;
-            font-weight: bold;
-            padding: 6px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .top-btn:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .stats-display {
+        #main-area {
+            flex: 1;
             display: flex;
-            gap: 15px;
-            color: white;
-            font-weight: bold;
-            font-size: 15px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
-
-        .stat-item {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 5px 12px;
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        /* 세로형 Roblox 스타일 창 */
-        .roblox-window {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            width: 320px;
-            max-height: 80vh;
-            background: #232527;
-            border-radius: 12px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
-            display: none;
             flex-direction: column;
+            position: relative;
+        }
+
+        #top-bar {
+            height: 60px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 0.95rem;
+        }
+
+        .stat-group { display: flex; gap: 20px; align-items: center; }
+        .stat-item { font-weight: 600; display: flex; gap: 6px; align-items: center; }
+        .stat-val { color: var(--accent-blue); font-weight: 700; }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background: #e2e8f0;
             overflow: hidden;
-            z-index: 30;
-            opacity: 0;
-            transition: all 0.2s ease-out;
-            border: 2px solid rgba(255,255,255,0.1);
-            color: white;
         }
 
-        .roblox-window.active {
-            display: flex;
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 1;
+        canvas { display: block; cursor: crosshair; }
+
+        .panel-section {
+            padding: 14px;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .window-header {
-            background: #191b1d;
-            padding: 12px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-            font-size: 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+        .panel-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
         }
 
-        .close-btn {
-            background: #ff4d4d;
-            border: none;
-            color: white;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        .build-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
         }
 
-        .window-body {
-            padding: 12px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 60vh;
-        }
-
-        /* 세로 목록형 카드 */
-        .vertical-item-card {
-            background: #2e3033;
-            border-radius: 8px;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .vertical-item-card .item-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .vertical-item-card .icon {
-            font-size: 26px;
-            width: 40px;
-            height: 40px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .vertical-item-card .details {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .vertical-item-card .name {
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .vertical-item-card .sub {
-            font-size: 11px;
-            color: #aaa;
-        }
-
-        .vertical-item-card button {
-            background: #4a4d52;
-            color: white;
-            border: 1px solid #686c73;
-            padding: 6px 12px;
+        .build-btn {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 10px 8px;
             border-radius: 6px;
-            font-weight: bold;
             cursor: pointer;
-            font-size: 12px;
+            text-align: left;
+            transition: all 0.15s ease;
         }
 
-        .vertical-item-card button:hover {
-            background: #5d6168;
+        .build-btn:hover {
+            border-color: var(--accent-blue);
+            background: #eff6ff;
         }
 
-        .vertical-item-card button:disabled {
-            background: #333;
-            border-color: #444;
-            color: #777;
-            cursor: not-allowed;
+        .build-btn.active {
+            background: #dbeafe;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
         }
 
-        /* Roblox Hotbar (1~9번) */
-        .hotbar-container {
+        .build-title { font-weight: 700; font-size: 0.85rem; display: block; color: var(--text-main); }
+        .build-cost { font-size: 0.75rem; color: var(--text-sub); margin-top: 2px; display: block; }
+
+        .market-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .market-table th, .market-table td {
+            padding: 6px 4px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .trend-up { color: var(--accent-red); font-weight: 700; }
+        .trend-down { color: var(--accent-blue); font-weight: 700; }
+
+        #info-panel {
             position: absolute;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 6px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 6px;
-            border-radius: 10px;
-            backdrop-filter: blur(4px);
-            z-index: 10;
+            bottom: 20px;
+            right: 20px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            width: 280px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: none;
         }
 
-        .hotbar-slot {
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        .btn-action {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            color: white;
+            margin-top: 10px;
+            transition: opacity 0.2s;
+        }
+        .btn-action:hover { opacity: 0.9; }
+
+        /* 그래프 오버레이 하단 창 */
+        #chart-container {
+            height: 120px;
+            background: var(--panel-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 8px 15px;
             position: relative;
-            cursor: pointer;
-            color: white;
         }
-
-        .hotbar-slot.active {
-            border-color: #ffffff;
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .hotbar-slot .num {
-            position: absolute;
-            top: 2px;
-            left: 4px;
-            font-size: 10px;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .hotbar-slot .icon {
-            font-size: 20px;
-        }
-
-        .hotbar-slot .count {
-            position: absolute;
-            bottom: 2px;
-            right: 4px;
-            font-size: 10px;
-            font-weight: bold;
-        }
-
-        /* 회색 계열 [E] 전용 버튼 */
-        #e-button-prompt {
-            position: absolute;
-            display: none;
-            background: rgba(45, 48, 53, 0.92);
-            color: #ffffff;
-            border: 2px solid #6e737d;
-            border-radius: 8px;
-            padding: 5px 12px;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 25;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            transform: translate(-50%, -100%);
-            align-items: center;
-            gap: 6px;
-            transition: background 0.15s;
-        }
-
-        #e-button-prompt:hover {
-            background: rgba(65, 70, 78, 0.98);
-            border-color: #8a909c;
-        }
-
-        #e-button-prompt .key-tag {
-            background: #50555e;
-            color: #ffffff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            border: 1px solid #737985;
-        }
-
-        /* Mobile Virtual Joystick */
-        #virtual-joystick {
-            position: absolute;
-            bottom: 25px;
-            left: 25px;
-            width: 90px;
-            height: 90px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            display: none;
-            z-index: 10;
-            touch-action: none;
-        }
-
-        #joystick-handle {
-            position: absolute;
-            top: 22.5px;
-            left: 22.5px;
-            width: 45px;
-            height: 45px;
-            background: rgba(255, 255, 255, 0.6);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        /* Toast */
-        #toast {
-            position: absolute;
-            top: 65px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(30, 32, 35, 0.9);
-            color: white;
-            padding: 8px 18px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: bold;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: 40;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
+        #chartCanvas { width: 100%; height: 80px; display: block; }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="stats-display">
-                <div class="stat-item" id="coin-display">🪙 100 G</div>
+    <!-- 왼쪽 설정/건설 메뉴 -->
+    <div id="sidebar">
+        <div class="panel-section">
+            <div class="panel-title">건설 및 자동화 도구</div>
+            <div class="build-grid">
+                <button class="build-btn active" onclick="setMode('select', this)">
+                    <span class="build-title">👆 선택 및 정보</span>
+                    <span class="build-cost">설비 클릭 관리</span>
+                </button>
+                <button class="build-btn" onclick="setMode('belt', this)">
+                    <span class="build-title">🛤️ 컨베이어 벨트</span>
+                    <span class="build-cost">$10 / 설치</span>
+                </button>
+                <button class="build-btn" onclick="setMode('wire', this)">
+                    <span class="build-title">⚡ 회로 신호선</span>
+                    <span class="build-cost">$5 / 연결</span>
+                </button>
+                <button class="build-btn" onclick="setMode('miner', this)">
+                    <span class="build-title">⛏️ 자원 채굴기</span>
+                    <span class="build-cost">$120</span>
+                </button>
+                <button class="build-btn" onclick="setMode('processor', this)">
+                    <span class="build-title">⚙️ 가공 공장</span>
+                    <span class="build-cost">$250</span>
+                </button>
+                <button class="build-btn" onclick="setMode('clock', this)">
+                    <span class="build-title">⏱️ 회로 타이머</span>
+                    <span class="build-cost">$80</span>
+                </button>
+                <button class="build-btn" onclick="setMode('seller', this)">
+                    <span class="build-title">📦 자동 출하 창고</span>
+                    <span class="build-cost">$180</span>
+                </button>
             </div>
-            <button class="top-btn" onclick="toggleWindow('inventory-window')">🎒 인벤토리 (B)</button>
         </div>
 
-        <div id="toast">메시지</div>
-
-        <!-- 회색 계열 [E] 버튼 (대상 근처에 배치) -->
-        <div id="e-button-prompt" onclick="triggerInteraction()">
-            <span class="key-tag">E</span>
-            <span id="e-prompt-text">수확</span>
+        <div class="panel-section" style="flex:1; overflow-y:auto;">
+            <div class="panel-title">실시간 자원 시장 시세</div>
+            <table class="market-table">
+                <thead>
+                    <tr>
+                        <th>품목</th>
+                        <th>현재가</th>
+                        <th>변동</th>
+                        <th>시업 재고</th>
+                    </tr>
+                </thead>
+                <tbody id="market-body"></tbody>
+            </table>
         </div>
 
-        <canvas id="gameCanvas"></canvas>
+        <div class="panel-section">
+            <button class="btn-action" style="background: var(--accent-green);" onclick="sellAll()">모든 설비 재고 수동 판매</button>
+        </div>
+    </div>
 
-        <!-- Hotbar (1~9 Slots) -->
-        <div class="hotbar-container" id="hotbar"></div>
-
-        <!-- Mobile Joystick -->
-        <div id="virtual-joystick">
-            <div id="joystick-handle"></div>
+    <!-- 메인 타이쿤 게임 영역 -->
+    <div id="main-area">
+        <div id="top-bar">
+            <div class="stat-group">
+                <div class="stat-item">
+                    <span>자금:</span>
+                    <span class="stat-val" id="money-txt">$1,000</span>
+                </div>
+                <div class="stat-item">
+                    <span>유지비:</span>
+                    <span style="color: var(--accent-red);" id="upkeep-txt">-$0/초</span>
+                </div>
+            </div>
+            <div class="stat-group">
+                <div class="stat-item">
+                    <span>최근 손익(Net Profit):</span>
+                    <span id="profit-txt" style="font-weight:700;">$0</span>
+                </div>
+                <div class="stat-item">
+                    <span>시세 변동:</span>
+                    <span id="timer-txt" style="color: var(--accent-blue);">10초</span>
+                </div>
+            </div>
         </div>
 
-        <!-- 단일 상점 창 (세로형) -->
-        <div id="shop-window" class="roblox-window">
-            <div class="window-header">
-                <span>🛒 정원 상점</span>
-                <button class="close-btn" onclick="toggleWindow('shop-window')">X</button>
+        <!-- 캔버스 실시간 실행 화면 -->
+        <div id="canvas-container">
+            <canvas id="factoryCanvas"></canvas>
+
+            <div id="info-panel">
+                <h4 id="info-title" style="margin-bottom: 6px;">설비 정보</h4>
+                <div id="info-body" style="font-size:0.85rem; color: var(--text-sub);"></div>
+                <button class="btn-action" style="background: var(--accent-red);" onclick="deleteSelected()">건물 철거 및 철회</button>
             </div>
-            <div style="padding: 8px 12px 0 12px; font-size: 11px; color: #aaa; text-align: right;">
-                재고 리셋까지: <span id="reset-timer" style="color:#d0d4dc; font-weight:bold;">60s</span>
-            </div>
-            <div class="window-body" id="shop-items-container"></div>
         </div>
 
-        <!-- 인벤토리 창 (세로형) -->
-        <div id="inventory-window" class="roblox-window">
-            <div class="window-header">
-                <span>🎒 인벤토리</span>
-                <button class="close-btn" onclick="toggleWindow('inventory-window')">X</button>
-            </div>
-            <div class="window-body" id="inventory-items-container"></div>
-        </div>
-
-        <!-- 판매 창 (세로형) -->
-        <div id="sell-window" class="roblox-window">
-            <div class="window-header">
-                <span>💰 작물 판매소</span>
-                <button class="close-btn" onclick="toggleWindow('sell-window')">X</button>
-            </div>
-            <div class="window-body" id="sell-items-container"></div>
-            <div style="padding: 10px;">
-                <button onclick="sellAllHarvested()" style="width:100%; padding: 10px; background: #4a4d52; color:white; border:1px solid #686c73; border-radius: 8px; font-weight:bold; cursor:pointer;">모든 수확물 판매하기</button>
-            </div>
+        <!-- 하단 실시간 수익/손익 실시간 차트 -->
+        <div id="chart-container">
+            <div class="panel-title" style="margin-bottom: 4px;">실시간 순이익 흐름 차트 (0 위: 흑자 / 0 아래: 적자)</div>
+            <canvas id="chartCanvas"></canvas>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
+        const GRID = 40;
+        let money = 1000;
+        let currentMode = 'select';
+        let selected = null;
+        let wireStart = null;
+
+        // 경제 시스템 데이터
+        const market = {
+            ore: { name: "철광석", price: 20, base: 20, trend: 0, stock: 0 },
+            ingot: { name: "가공 철판", price: 55, base: 55, trend: 0, stock: 0 },
+            circuit: { name: "전자 회로", price: 150, base: 150, trend: 0, stock: 0 }
+        };
+
+        const entities = [];
+        const wires = [];
+        const items = []; // 벨트 위 애니메이션 아이템
+        const profitHistory = new Array(50).fill(0); // 차트용 손익 히스토리
+
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        const canvas = document.getElementById('factoryCanvas');
         const ctx = canvas.getContext('2d');
+        const chartCanvas = document.getElementById('chartCanvas');
+        const chartCtx = chartCanvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            // 경작지 구역 중앙 배치 재계산
-            if (farmField) {
-                farmField.x = canvas.width / 2 - 220;
-                farmField.y = canvas.height / 2 - 40;
-            }
+        function resize() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            chartCanvas.width = chartCanvas.clientWidth;
+            chartCanvas.height = chartCanvas.clientHeight;
         }
+        window.addEventListener('resize', resize);
+        resize();
 
-        // Game State
-        const state = {
-            coins: 100,
-            activeSlot: 0,
-            hotbar: Array(9).fill(null),
-            inventory: {
-                seeds: { '당근 씨앗': 3 },
-                crops: {}
-            },
-            // 다양해진 작물 데이터 (단일 수확 & 다회 수확 작물 포함)
-            seedsData: {
-                '당근 씨앗': { price: 10, growTime: 5, reward: 22, icon: '🥕', cropName: '당근', maxHarvests: 1 },
-                '해바라기 씨앗': { price: 15, growTime: 7, reward: 35, icon: '🌻', cropName: '해바라기', maxHarvests: 1 },
-                '옥수수 씨앗': { price: 25, growTime: 10, reward: 58, icon: '🌽', cropName: '옥수수', maxHarvests: 1 },
-                '딸기 씨앗': { price: 35, growTime: 12, reward: 28, icon: '🍓', cropName: '딸기', maxHarvests: 4 },
-                '토마토 씨앗': { price: 50, growTime: 15, reward: 38, icon: '🍅', cropName: '토마토', maxHarvests: 5 },
-                '가지 씨앗': { price: 65, growTime: 18, reward: 140, icon: '🍆', cropName: '가지', maxHarvests: 1 },
-                '수박 씨앗': { price: 90, growTime: 22, reward: 210, icon: '🍉', cropName: '수박', maxHarvests: 1 },
-                '블루베리 씨앗': { price: 110, growTime: 25, reward: 60, icon: '🫐', cropName: '블루베리', maxHarvests: 6 },
-                '황금사과 씨앗': { price: 160, growTime: 30, reward: 420, icon: '🍎', cropName: '황금사과', maxHarvests: 1 }
-            },
-            shopStock: {},
-            resetTimeLeft: 60
-        };
-
-        // 경작지 (심는 구역, 텍스트 없이 깔끔한 흙밭)
-        const farmField = {
-            x: window.innerWidth / 2 - 220,
-            y: window.innerHeight / 2 - 40,
-            width: 440,
-            height: 300
-        };
-
-        // 심어진 작물 리스트
-        const plantedCrops = [];
-
-        // 건물 모델링 영역
-        const zones = {
-            shop: { x: 180, y: 150, width: 100, height: 80, title: '상점' },
-            sell: { x: 420, y: 150, width: 100, height: 80, title: '판매소' }
-        };
-
-        // 로블록스 캐릭터
-        const player = {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2 + 180,
-            size: 28,
-            speed: 3.5,
-            walkCycle: 0,
-            isMoving: false,
-            nearTarget: null
-        };
-
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        // 상점 재고 갱신
-        function refreshShopStock() {
-            for (let seed in state.seedsData) {
-                state.shopStock[seed] = Math.floor(Math.random() * 6) + 2;
+        // 엔티티 구조
+        class Entity {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.signal = false;
+                this.timer = 0;
+                this.dir = 'RIGHT'; // 컨베이어 방향
             }
-            state.resetTimeLeft = 60;
-            renderShop();
-        }
-        refreshShopStock();
 
-        setInterval(() => {
-            state.resetTimeLeft--;
-            const timerEl = document.getElementById('reset-timer');
-            if (timerEl) timerEl.innerText = `${state.resetTimeLeft}s`;
-            if (state.resetTimeLeft <= 0) {
-                refreshShopStock();
-                showToast('상점 재고가 갱신되었습니다!');
-            }
-        }, 1000);
+            update() {
+                // 유지비 발생
+                if (this.type === 'miner') totalExpense += 0.05;
+                if (this.type === 'processor') totalExpense += 0.1;
 
-        // Hotbar Setup (1~9)
-        function initHotbar() {
-            const container = document.getElementById('hotbar');
-            container.innerHTML = '';
-            for (let i = 0; i < 9; i++) {
-                const slot = document.createElement('div');
-                slot.className = `hotbar-slot ${state.activeSlot === i ? 'active' : ''}`;
-                slot.onclick = () => selectHotbarSlot(i);
-                
-                const item = state.hotbar[i];
-                slot.innerHTML = `
-                    <span class="num">${i + 1}</span>
-                    <span class="icon">${item ? item.icon : ''}</span>
-                    <span class="count">${item ? item.count : ''}</span>
-                `;
-                container.appendChild(slot);
-            }
-        }
+                if (this.type === 'clock') {
+                    this.timer += 0.02;
+                    if (this.timer >= 2) {
+                        this.signal = !this.signal;
+                        this.timer = 0;
+                    }
+                }
 
-        function selectHotbarSlot(index) {
-            state.activeSlot = index;
-            initHotbar();
-        }
+                if (this.type === 'miner') {
+                    if (this.signal || !this.hasWire()) {
+                        this.timer += 0.02;
+                        if (this.timer >= 2.5) {
+                            items.push(new MovingItem(this.x, this.y, 'ore'));
+                            this.timer = 0;
+                        }
+                    }
+                }
 
-        // 키보드 조작
-        const keys = {};
-        window.addEventListener('keydown', e => {
-            keys[e.code] = true;
-            if (e.code.startsWith('Digit')) {
-                const num = parseInt(e.code.replace('Digit', ''));
-                if (num >= 1 && num <= 9) {
-                    selectHotbarSlot(num - 1);
+                if (this.type === 'seller') {
+                    items.forEach((it, idx) => {
+                        if (Math.floor(it.x) === this.x && Math.floor(it.y) === this.y) {
+                            const val = market[it.type].price;
+                            money += val;
+                            totalIncome += val;
+                            market[it.type].stock += 1;
+                            items.splice(idx, 1);
+                        }
+                    });
                 }
             }
-            if (e.code === 'KeyB') {
-                toggleWindow('inventory-window');
+
+            hasWire() {
+                return wires.some(w => w.to === this);
             }
-            if (e.code === 'KeyE') {
-                triggerInteraction();
+
+            draw() {
+                const px = this.x * GRID;
+                const py = this.y * GRID;
+
+                ctx.fillStyle = this.getColor();
+                ctx.fillRect(px+2, py+2, GRID-4, GRID-4);
+                ctx.strokeStyle = (selected === this) ? '#2563eb' : '#cbd5e1';
+                ctx.lineWidth = (selected === this) ? 3 : 1;
+                ctx.strokeRect(px+2, py+2, GRID-4, GRID-4);
+
+                ctx.fillStyle = '#0f172a';
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                let icon = '';
+                if (this.type === 'miner') icon = '⛏️';
+                if (this.type === 'processor') icon = '⚙️';
+                if (this.type === 'clock') icon = '⏱️';
+                if (this.type === 'seller') icon = '📦';
+                if (this.type === 'belt') icon = '➔';
+
+                ctx.fillText(icon, px + GRID/2, py + GRID/2);
+
+                if (this.type === 'clock' || this.hasWire()) {
+                    ctx.fillStyle = this.signal ? '#059669' : '#dc2626';
+                    ctx.beginPath();
+                    ctx.arc(px + GRID - 6, py + 6, 4, 0, Math.PI*2);
+                    ctx.fill();
+                }
             }
-        });
-        window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // Mobile Joystick
-        const joystick = document.getElementById('virtual-joystick');
-        const handle = document.getElementById('joystick-handle');
-        let joyActive = false, joyVector = { x: 0, y: 0 }, joyCenter = { x: 0, y: 0 };
-
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            joystick.style.display = 'block';
-            joystick.addEventListener('touchstart', (e) => {
-                joyActive = true;
-                const rect = joystick.getBoundingClientRect();
-                joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-                updateJoystick(e.touches[0].clientX, e.touches[0].clientY);
-            });
-
-            window.addEventListener('touchmove', (e) => {
-                if (!joyActive) return;
-                updateJoystick(e.touches[0].clientX, e.touches[0].clientY);
-            });
-
-            window.addEventListener('touchend', () => {
-                joyActive = false;
-                joyVector = { x: 0, y: 0 };
-                handle.style.transform = `translate(0px, 0px)`;
-            });
+            getColor() {
+                switch(this.type) {
+                    case 'miner': return '#f1f5f9';
+                    case 'processor': return '#ffedd5';
+                    case 'clock': return '#fef9c3';
+                    case 'seller': return '#dcfce7';
+                    case 'belt': return '#e2e8f0';
+                    default: return '#ffffff';
+                }
+            }
         }
 
-        function updateJoystick(clientX, clientY) {
-            let dx = clientX - joyCenter.x;
-            let dy = clientY - joyCenter.y;
-            const dist = Math.hypot(dx, dy);
-            const maxRadius = 30;
-
-            if (dist > maxRadius) {
-                dx = (dx / dist) * maxRadius;
-                dy = (dy / dist) * maxRadius;
+        // 레일 위 이동 아이템 애니메이션
+        class MovingItem {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.speed = 0.03;
             }
 
-            handle.style.transform = `translate(${dx}px, ${dy}px)`;
-            joyVector = { x: dx / maxRadius, y: dy / maxRadius };
+            update() {
+                const curX = Math.floor(this.x);
+                const curY = Math.floor(this.y);
+                const tile = entities.find(e => e.x === curX && e.y === curY);
+
+                // 가공 공장 입착 시 변환
+                if (tile && tile.type === 'processor') {
+                    if (tile.signal || !tile.hasWire()) {
+                        if (this.type === 'ore') {
+                            this.type = 'ingot';
+                        }
+                    }
+                }
+
+                // 이동 처리
+                this.x += this.speed;
+            }
+
+            draw() {
+                const px = this.x * GRID + GRID/2;
+                const py = this.y * GRID + GRID/2;
+
+                ctx.beginPath();
+                ctx.arc(px, py, 6, 0, Math.PI*2);
+                if (this.type === 'ore') ctx.fillStyle = '#78716c';
+                else if (this.type === 'ingot') ctx.fillStyle = '#38bdf8';
+                else ctx.fillStyle = '#a855f7';
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
         }
 
-        // 씨앗 심기 (심는 구역 제한 & 작물 간 겹침 방지)
+        // 모드 전환
+        function setMode(mode, btn) {
+            currentMode = mode;
+            wireStart = null;
+            document.querySelectorAll('.build-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // 캔버스 클릭 처리
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
+            const gx = Math.floor((e.clientX - rect.left) / GRID);
+            const gy = Math.floor((e.clientY - rect.top) / GRID);
 
-            // 1. 심는 구역 내부인지 검사
-            if (clickX < farmField.x || clickX > farmField.x + farmField.width ||
-                clickY < farmField.y || clickY > farmField.y + farmField.height) {
-                return;
-            }
+            const clicked = entities.find(ent => ent.x === gx && ent.y === gy);
 
-            // 2. 작물 겹침 검사 (기존 작물과 최소 36px 거리 유지)
-            for (let crop of plantedCrops) {
-                if (Math.hypot(clickX - crop.x, clickY - crop.y) < 36) {
-                    showToast('작물이 너무 가깝습니다! 다른 위치에 심으세요.');
-                    return;
+            if (currentMode === 'select') {
+                selected = clicked || null;
+                updatePanel();
+            } else if (currentMode === 'wire') {
+                if (clicked) {
+                    if (!wireStart) {
+                        wireStart = clicked;
+                    } else if (wireStart !== clicked) {
+                        if (money >= 5) {
+                            money -= 5;
+                            wires.push({ from: wireStart, to: clicked });
+                            wireStart = null;
+                        }
+                    }
                 }
-            }
-
-            // 3. 핫바에서 선택된 씨앗 심기
-            const currentItem = state.hotbar[state.activeSlot];
-            if (currentItem && currentItem.type === 'seed' && currentItem.count > 0) {
-                const seedData = state.seedsData[currentItem.name];
-                plantedCrops.push({
-                    id: Date.now() + Math.random(),
-                    x: clickX,
-                    y: clickY,
-                    seedName: currentItem.name,
-                    growTime: seedData.growTime,
-                    plantedAt: Date.now(),
-                    isReady: false,
-                    remaining: seedData.growTime,
-                    harvestsLeft: seedData.maxHarvests || 1
-                });
-
-                currentItem.count--;
-                if (currentItem.count <= 0) {
-                    state.hotbar[state.activeSlot] = null;
+            } else {
+                if (!clicked) {
+                    const costs = { miner: 120, processor: 250, clock: 80, seller: 180, belt: 10 };
+                    const cost = costs[currentMode];
+                    if (money >= cost) {
+                        money -= cost;
+                        entities.push(new Entity(gx, gy, currentMode));
+                    }
                 }
-                initHotbar();
-                showToast(`${currentItem.name}을(를) 심었습니다!`);
             }
         });
 
-        // E키 또는 E버튼 클릭을 통한 수확 및 창 열기
-        function triggerInteraction() {
-            if (!player.nearTarget) return;
-
-            if (player.nearTarget === 'shop') {
-                toggleWindow('shop-window');
-            } else if (player.nearTarget === 'sell') {
-                toggleWindow('sell-window');
-            } else if (typeof player.nearTarget === 'object') {
-                const cropObj = player.nearTarget;
-                const seedInfo = state.seedsData[cropObj.seedName];
-                
-                // 인벤토리 수확물 추가
-                state.inventory.crops[seedInfo.cropName] = (state.inventory.crops[seedInfo.cropName] || 0) + 1;
-                
-                cropObj.harvestsLeft--;
-
-                if (cropObj.harvestsLeft > 0) {
-                    // 다회 수확 작물: 다시 자람 상태로 리셋
-                    cropObj.plantedAt = Date.now();
-                    cropObj.isReady = false;
-                    cropObj.remaining = seedInfo.growTime;
-                    showToast(`${seedInfo.cropName} 수확 완료! (남은 수확 횟수: ${cropObj.harvestsLeft}회)`);
-                } else {
-                    // 수확 횟수 소진 시 제거
-                    const idx = plantedCrops.findIndex(c => c.id === cropObj.id);
-                    if (idx !== -1) plantedCrops.splice(idx, 1);
-                    showToast(`${seedInfo.cropName} 수확 완료! (인벤토리에 저장됨)`);
+        function deleteSelected() {
+            if (!selected) return;
+            const idx = entities.indexOf(selected);
+            if (idx > -1) {
+                for (let i = wires.length - 1; i >= 0; i--) {
+                    if (wires[i].from === selected || wires[i].to === selected) wires.splice(i, 1);
                 }
-
-                player.nearTarget = null;
-                updatePromptPosition();
+                entities.splice(idx, 1);
+                selected = null;
+                updatePanel();
             }
         }
 
-        // 세로형 상점 UI
-        function renderShop() {
-            const container = document.getElementById('shop-items-container');
-            container.innerHTML = '';
-
-            for (let [seed, data] of Object.entries(state.seedsData)) {
-                const stock = state.shopStock[seed] || 0;
-                const card = document.createElement('div');
-                card.className = 'vertical-item-card';
-                card.innerHTML = `
-                    <div class="item-info">
-                        <div class="icon">${data.icon}</div>
-                        <div class="details">
-                            <span class="name">${seed}</span>
-                            <span class="sub">가격: ${data.price}G | 재고: ${stock}개 ${data.maxHarvests > 1 ? `(${data.maxHarvests}회 수확)` : ''}</span>
-                        </div>
-                    </div>
-                    <button ${stock <= 0 ? 'disabled' : ''} onclick="buySeed('${seed}')">
-                        ${stock > 0 ? '구매' : '품절'}
-                    </button>
-                `;
-                container.appendChild(card);
-            }
+        function updatePanel() {
+            const panel = document.getElementById('info-panel');
+            if (!selected) { panel.style.display = 'none'; return; }
+            panel.style.display = 'block';
+            document.getElementById('info-title').innerText = selected.type.toUpperCase() + ' 설비 정보';
+            document.getElementById('info-body').innerHTML = `
+                위치 좌표: (${selected.x}, ${selected.y})<br>
+                회로 신호 상태: <b>${selected.signal ? 'HIGH (ON)' : 'LOW (OFF)'}</b>
+            `;
         }
 
-        function buySeed(seedName) {
-            const price = state.seedsData[seedName].price;
-            if (state.coins >= price && state.shopStock[seedName] > 0) {
-                state.coins -= price;
-                state.shopStock[seedName]--;
-                
-                addToHotbarOrInventory('seed', seedName, state.seedsData[seedName].icon);
-                
-                updateUI();
-                renderShop();
-                showToast(`${seedName} 구매 완료!`);
-            } else if (state.coins < price) {
-                showToast('코인이 부족합니다!');
-            }
-        }
-
-        function addToHotbarOrInventory(type, name, icon) {
-            let emptySlot = state.hotbar.findIndex(slot => slot && slot.name === name);
-            if (emptySlot !== -1) {
-                state.hotbar[emptySlot].count++;
-            } else {
-                let nullSlot = state.hotbar.findIndex(slot => slot === null);
-                if (nullSlot !== -1) {
-                    state.hotbar[nullSlot] = { type, name, icon, count: 1 };
-                } else {
-                    state.inventory.seeds[name] = (state.inventory.seeds[name] || 0) + 1;
+        // 시장 경제 갱신
+        let marketTimer = 10;
+        setInterval(() => {
+            marketTimer--;
+            if (marketTimer <= 0) {
+                marketTimer = 10;
+                for (let k in market) {
+                    const item = market[k];
+                    const supply = (10 - item.stock) * 0.05;
+                    const rand = (Math.random() - 0.48) * 0.15;
+                    item.price = Math.max(5, Math.round(item.base * (1 + supply + rand)));
+                    item.trend = item.price - item.base;
+                    item.stock = Math.max(0, item.stock - 3);
                 }
+                renderMarket();
             }
-            initHotbar();
-        }
+            document.getElementById('timer-txt').innerText = marketTimer + '초';
+        }, 1000);
 
-        // 인벤토리 UI
-        function renderInventory() {
-            const container = document.getElementById('inventory-items-container');
-            container.innerHTML = '';
-
-            for (let [seed, count] of Object.entries(state.inventory.seeds)) {
-                if (count <= 0) continue;
-                const data = state.seedsData[seed];
-                const card = document.createElement('div');
-                card.className = 'vertical-item-card';
-                card.innerHTML = `
-                    <div class="item-info">
-                        <div class="icon">${data.icon}</div>
-                        <div class="details">
-                            <span class="name">${seed}</span>
-                            <span class="sub">보유: ${count}개</span>
-                        </div>
-                    </div>
-                    <button onclick="equipSeedToHotbar('${seed}')">핫바 장착</button>
+        function renderMarket() {
+            const tbody = document.getElementById('market-body');
+            tbody.innerHTML = '';
+            for (let k in market) {
+                const item = market[k];
+                const tr = document.createElement('tr');
+                const tClass = item.trend >= 0 ? 'trend-up' : 'trend-down';
+                const tSign = item.trend >= 0 ? '▲' : '▼';
+                tr.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>$${item.price}</td>
+                    <td class="${tClass}">${tSign} ${Math.abs(item.trend)}</td>
+                    <td>${item.stock}</td>
                 `;
-                container.appendChild(card);
-            }
-
-            for (let [crop, count] of Object.entries(state.inventory.crops)) {
-                if (count <= 0) continue;
-                const card = document.createElement('div');
-                card.className = 'vertical-item-card';
-                card.innerHTML = `
-                    <div class="item-info">
-                        <div class="icon">📦</div>
-                        <div class="details">
-                            <span class="name">${crop}</span>
-                            <span class="sub">보유: ${count}개</span>
-                        </div>
-                    </div>
-                    <span style="font-size:11px; color:#aaa;">판매소 이용 가능</span>
-                `;
-                container.appendChild(card);
+                tbody.appendChild(tr);
             }
         }
 
-        function equipSeedToHotbar(seedName) {
-            if (state.inventory.seeds[seedName] > 0) {
-                state.inventory.seeds[seedName]--;
-                addToHotbarOrInventory('seed', seedName, state.seedsData[seedName].icon);
-                renderInventory();
-                showToast('핫바에 장착되었습니다.');
-            }
+        function sellAll() {
+            items.forEach((it, idx) => {
+                money += market[it.type].price;
+            });
+            items.length = 0;
         }
 
-        // 판매소 UI
-        function renderSell() {
-            const container = document.getElementById('sell-items-container');
-            container.innerHTML = '';
+        // 손익 차트 렌더링
+        setInterval(() => {
+            const netProfit = totalIncome - totalExpense;
+            profitHistory.push(netProfit);
+            profitHistory.shift();
 
-            let hasCrops = false;
-            for (let [cropName, count] of Object.entries(state.inventory.crops)) {
-                if (count <= 0) continue;
-                hasCrops = true;
+            totalIncome = 0;
+            totalExpense = 0;
 
-                const seedKey = Object.keys(state.seedsData).find(k => state.seedsData[k].cropName === cropName);
-                const reward = seedKey ? state.seedsData[seedKey].reward : 20;
+            document.getElementById('profit-txt').innerText = (netProfit >= 0 ? '+$' : '-$') + Math.abs(Math.round(netProfit));
+            document.getElementById('profit-txt').style.color = netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            
+            drawChart();
+        }, 1000);
 
-                const card = document.createElement('div');
-                card.className = 'vertical-item-card';
-                card.innerHTML = `
-                    <div class="item-info">
-                        <div class="icon">🌾</div>
-                        <div class="details">
-                            <span class="name">${cropName}</span>
-                            <span class="sub">개당 ${reward}G | 보유: ${count}개</span>
-                        </div>
-                    </div>
-                    <button onclick="sellSingleCrop('${cropName}', ${reward})">판매</button>
-                `;
-                container.appendChild(card);
-            }
+        function drawChart() {
+            const w = chartCanvas.width;
+            const h = chartCanvas.height;
+            chartCtx.clearRect(0, 0, w, h);
 
-            if (!hasCrops) {
-                container.innerHTML = `<div style="text-align:center; color:#888; padding:20px;">판매할 작물이 없습니다.</div>`;
-            }
-        }
+            // 0 기준선
+            const zeroY = h / 2;
+            chartCtx.strokeStyle = '#94a3b8';
+            chartCtx.lineWidth = 1;
+            chartCtx.beginPath();
+            chartCtx.moveTo(0, zeroY);
+            chartCtx.lineTo(w, zeroY);
+            chartCtx.stroke();
 
-        function sellSingleCrop(cropName, reward) {
-            if (state.inventory.crops[cropName] > 0) {
-                state.inventory.crops[cropName]--;
-                state.coins += reward;
-                updateUI();
-                renderSell();
-                showToast(`${cropName} 판매 완료! (+${reward}G)`);
-            }
-        }
-
-        function sellAllHarvested() {
-            let totalGain = 0;
-            for (let [cropName, count] of Object.entries(state.inventory.crops)) {
-                if (count > 0) {
-                    const seedKey = Object.keys(state.seedsData).find(k => state.seedsData[k].cropName === cropName);
-                    const reward = seedKey ? state.seedsData[seedKey].reward : 20;
-                    totalGain += reward * count;
-                    state.inventory.crops[cropName] = 0;
-                }
-            }
-
-            if (totalGain > 0) {
-                state.coins += totalGain;
-                updateUI();
-                renderSell();
-                showToast(`모든 작물 판매 완료! (+${totalGain}G)`);
-            } else {
-                showToast('판매할 작물이 없습니다.');
-            }
-        }
-
-        function toggleWindow(windowId) {
-            const win = document.getElementById(windowId);
-            const isActive = win.classList.contains('active');
-
-            document.querySelectorAll('.roblox-window').forEach(w => w.classList.remove('active'));
-
-            if (!isActive) {
-                win.classList.add('active');
-                if (windowId === 'shop-window') renderShop();
-                if (windowId === 'inventory-window') renderInventory();
-                if (windowId === 'sell-window') renderSell();
-            }
-        }
-
-        function updateUI() {
-            document.getElementById('coin-display').innerText = `🪙 ${state.coins} G`;
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.style.opacity = '1';
-            setTimeout(() => toast.style.opacity = '0', 2200);
-        }
-
-        // 대상 옆에 회색 [E] 버튼 위치 동적 지정
-        function updatePromptPosition() {
-            const btn = document.getElementById('e-button-prompt');
-            const textEl = document.getElementById('e-prompt-text');
-
-            if (player.nearTarget) {
-                let targetX = 0, targetY = 0, label = '수확';
-
-                if (player.nearTarget === 'shop') {
-                    targetX = zones.shop.x + zones.shop.width / 2 + 35;
-                    targetY = zones.shop.y;
-                    label = '상점';
-                } else if (player.nearTarget === 'sell') {
-                    targetX = zones.sell.x + zones.sell.width / 2 + 35;
-                    targetY = zones.sell.y;
-                    label = '판매소';
-                } else if (typeof player.nearTarget === 'object') {
-                    targetX = player.nearTarget.x + 24;
-                    targetY = player.nearTarget.y;
-                    label = '수확';
-                }
-
-                btn.style.left = `${targetX}px`;
-                btn.style.top = `${targetY}px`;
-                btn.style.display = 'flex';
-                textEl.innerText = label;
-            } else {
-                btn.style.display = 'none';
-            }
-        }
-
-        // 게임 메인 업데이트
-        function update() {
-            let dx = 0, dy = 0;
-            if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
-            if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
-            if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
-            if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
-
-            if (joyActive) {
-                dx = joyVector.x;
-                dy = joyVector.y;
-            }
-
-            player.isMoving = (dx !== 0 || dy !== 0);
-
-            if (player.isMoving) {
-                const len = Math.hypot(dx, dy);
-                player.x += (dx / len) * player.speed;
-                player.y += (dy / len) * player.speed;
-                player.walkCycle += 0.2;
-            }
-
-            player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
-            player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
-
-            // 실시간 성장 상태 계산
-            const now = Date.now();
-            plantedCrops.forEach(crop => {
-                const elapsed = (now - crop.plantedAt) / 1000;
-                crop.remaining = Math.max(0, Math.ceil(crop.growTime - elapsed));
-                crop.isReady = crop.remaining <= 0;
-                crop.growthRatio = Math.min(1, elapsed / crop.growTime); // 0.0 ~ 1.0 실시간 성장율
+            // 그래프 그리기
+            chartCtx.beginPath();
+            const step = w / (profitHistory.length - 1);
+            
+            profitHistory.forEach((val, idx) => {
+                const x = idx * step;
+                const y = zeroY - (val * 1.5); // 스케일 조정
+                if (idx === 0) chartCtx.moveTo(x, y);
+                else chartCtx.lineTo(x, y);
             });
 
-            // 근접 대상 감지
-            let newTarget = null;
-
-            if (Math.hypot(player.x - (zones.shop.x + zones.shop.width/2), player.y - (zones.shop.y + zones.sell.height/2)) < 65) {
-                newTarget = 'shop';
-            } else if (Math.hypot(player.x - (zones.sell.x + zones.sell.width/2), player.y - (zones.sell.y + zones.sell.height/2)) < 65) {
-                newTarget = 'sell';
-            } else {
-                for (let crop of plantedCrops) {
-                    if (crop.isReady && Math.hypot(player.x - crop.x, player.y - crop.y) < 35) {
-                        newTarget = crop;
-                        break;
-                    }
-                }
-            }
-
-            player.nearTarget = newTarget;
-            updatePromptPosition();
+            chartCtx.strokeStyle = '#2563eb';
+            chartCtx.lineWidth = 2;
+            chartCtx.stroke();
         }
 
-        // 그래픽 렌더링
-        function draw() {
+        // 메인 게임 루프
+        function loop() {
+            wires.forEach(w => w.to.signal = w.from.signal);
+            entities.forEach(e => e.update());
+            items.forEach(it => it.update());
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. 경작지 구역 (텍스트 없이 깔끔한 흙밭 토지)
-            ctx.fillStyle = '#4a2f1b';
-            ctx.beginPath();
-            ctx.roundRect(farmField.x, farmField.y, farmField.width, farmField.height, 12);
-            ctx.fill();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = '#362112';
-            ctx.stroke();
-
-            // 2. 상점/판매소 3D 로블록스 건물 모델링
-            for (let [key, zone] of Object.entries(zones)) {
-                // 그림자
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                ctx.fillRect(zone.x + 5, zone.y + zone.height - 5, zone.width, 10);
-
-                // 본체
-                ctx.fillStyle = key === 'shop' ? '#2e3136' : '#282b30';
-                ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#4f545c';
-                ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
-
-                // 지붕
-                ctx.fillStyle = key === 'shop' ? '#40444b' : '#36393e';
-                ctx.beginPath();
-                ctx.moveTo(zone.x - 6, zone.y);
-                ctx.lineTo(zone.x + zone.width / 2, zone.y - 20);
-                ctx.lineTo(zone.x + zone.width + 6, zone.y);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // 간판
-                ctx.fillStyle = '#1e2022';
-                ctx.fillRect(zone.x + 10, zone.y + 10, zone.width - 20, 24);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 12px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(zone.title, zone.x + zone.width / 2, zone.y + 26);
+            // Grid
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x < canvas.width; x += GRID) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += GRID) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
             }
 
-            // 3. 심어진 작물 (실시간 성장 모습)
-            plantedCrops.forEach(crop => {
-                const seedData = state.seedsData[crop.seedName];
-
-                // 흙 베이스
-                ctx.fillStyle = '#331e10';
+            // Wires
+            wires.forEach(w => {
+                ctx.strokeStyle = w.from.signal ? 'var(--wire-on)' : 'var(--wire-off)';
+                ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.arc(crop.x, crop.y + 2, 14, 0, Math.PI * 2);
-                ctx.fill();
-
-                if (crop.isReady) {
-                    // 다 자란 모습
-                    ctx.font = '26px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(seedData.icon, crop.x, crop.y + 6);
-                } else {
-                    // 실시간 성장하는 싹 (크기 및 상태 변화)
-                    const scale = 0.4 + (crop.growthRatio * 0.6); // 40% ~ 100% 크기 성장
-                    ctx.save();
-                    ctx.translate(crop.x, crop.y);
-                    ctx.scale(scale, scale);
-                    ctx.font = '22px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('🌱', 0, 6);
-                    ctx.restore();
-
-                    // 근처 접근 시 남은 성장 시간 표시
-                    if (Math.hypot(player.x - crop.x, player.y - crop.y) < 80) {
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 11px sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(`${crop.remaining}초`, crop.x, crop.y - 16);
-                    }
-                }
+                ctx.moveTo(w.from.x * GRID + GRID/2, w.from.y * GRID + GRID/2);
+                ctx.lineTo(w.to.x * GRID + GRID/2, w.to.y * GRID + GRID/2);
+                ctx.stroke();
             });
 
-            // 4. 로블록스 캐릭터 렌더링
-            drawRobloxCharacter(player.x, player.y, player);
+            // Entities & Items
+            entities.forEach(e => e.draw());
+            items.forEach(it => it.draw());
+
+            document.getElementById('money-txt').innerText = '$' + Math.floor(money).toLocaleString();
+
+            requestAnimationFrame(loop);
         }
 
-        function drawRobloxCharacter(x, y, p) {
-            ctx.save();
-            ctx.translate(x, y);
-
-            const legOffset = p.isMoving ? Math.sin(p.walkCycle) * 6 : 0;
-
-            // Shadow
-            ctx.fillStyle = 'rgba(0,0,0,0.25)';
-            ctx.beginPath();
-            ctx.ellipse(0, 16, 14, 6, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Legs
-            ctx.fillStyle = '#1b263b';
-            ctx.fillRect(-9, 4 + legOffset, 7, 12);
-            ctx.fillRect(2, 4 - legOffset, 7, 12);
-
-            // Torso
-            ctx.fillStyle = '#2b5278';
-            ctx.fillRect(-12, -10, 24, 16);
-
-            // Head
-            ctx.fillStyle = '#f1c40f';
-            ctx.fillRect(-8, -26, 16, 15);
-
-            // Eyes
-            ctx.fillStyle = '#000';
-            ctx.fillRect(-4, -20, 2.5, 3);
-            ctx.fillRect(2.5, -20, 2.5, 3);
-
-            ctx.restore();
-        }
-
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        initHotbar();
-        requestAnimationFrame(gameLoop);
+        renderMarket();
+        loop();
     </script>
 </body>
 </html>
