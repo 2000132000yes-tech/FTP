@@ -1,720 +1,256 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2D Pixel Fighter - Perfected Combo & Effects</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #ffffff;
-            font-family: monospace, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-        }
-
-        #game-wrapper {
-            position: relative;
-            margin-top: 10px;
-            border: 3px solid #000;
-            background: #ffffff;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        canvas {
-            display: block;
-            image-rendering: pixelated;
-        }
-
-        #hud {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-            font-weight: bold;
-            font-size: 12px;
-            color: #000;
-        }
-
-        .bar-container {
-            width: 100%;
-            background: #eee;
-            border: 2px solid #000;
-            height: 14px;
-            margin-top: 2px;
-        }
-
-        .bar-fill {
-            height: 100%;
-            background: #000;
-            width: 100%;
-            transition: width 0.1s linear;
-        }
-
-        .dummy-bar {
-            background: #ff4444;
-        }
-
-        #controls-area {
-            width: 100%;
-            max-width: 450px;
-            flex: 1;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            box-sizing: border-box;
-        }
-
-        #joystick-zone {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.03);
-            border: 2px dashed #999;
-            position: relative;
-            touch-action: none;
-        }
-
-        #joystick-knob {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 40px;
-            height: 40px;
-            margin-top: -20px;
-            margin-left: -20px;
-            border-radius: 50%;
-            background: #000;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .action-btn {
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
-            background: #fff;
-            border: 3px solid #000;
-            color: #000;
-            font-weight: 900;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 0 #000;
-            touch-action: manipulation;
-        }
-
-        .action-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #000;
-            background: #000;
-            color: #fff;
-        }
-
-        .btn-atk { width: 65px; height: 65px; font-size: 15px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Grow a Garden</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #eef7e8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      color: #2d4030;
+    }
+    #game-container {
+      width: 100%;
+      max-width: 480px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    header {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .gold-display {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #2e7d32;
+    }
+    .garden-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .plot {
+      aspect-ratio: 1;
+      background-color: #8d6e63;
+      border: 4px solid #6d4c41;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+      box-shadow: inset 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .plot .plant-icon {
+      font-size: 2.5rem;
+      transition: transform 0.2s ease;
+    }
+    .plot .water-bar {
+      position: absolute;
+      bottom: 6px;
+      width: 80%;
+      height: 6px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .plot .water-fill {
+      height: 100%;
+      background: #29b6f6;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .controls {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .shop-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+    }
+    .btn-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    button {
+      padding: 12px 8px;
+      border: none;
+      border-radius: 12px;
+      background: #4caf50;
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:active {
+      transform: scale(0.97);
+    }
+    button.secondary {
+      background: #0288d1;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status-text {
+      font-size: 0.85rem;
+      color: #666;
+      text-align: center;
+      min-height: 1.2em;
+    }
+  </style>
 </head>
 <body>
 
-    <div id="game-wrapper">
-        <canvas id="gameCanvas"></canvas>
+<div id="game-container">
+  <header>
+    <div>🌱 <strong>정원 키우기</strong></div>
+    <div class="gold-display">💰 <span id="gold">50</span>G</div>
+  </header>
 
-        <div id="hud">
-            <div style="width: 42%;">
-                PLAYER
-                <div class="bar-container"><div id="player-hp" class="bar-fill"></div></div>
-            </div>
-            <div style="width: 42%; text-align: right;">
-                DUMMY
-                <div class="bar-container" style="margin-left: auto;"><div id="dummy-hp" class="bar-fill dummy-bar"></div></div>
-            </div>
-        </div>
-    </div>
+  <div class="garden-grid" id="garden"></div>
 
-    <div id="controls-area">
-        <div id="joystick-zone">
-            <div id="joystick-knob"></div>
-        </div>
-        <div class="btn-group">
-            <button class="action-btn" id="btn-jump">JUMP</button>
-            <button class="action-btn" id="btn-skill">SKILL</button>
-            <button class="action-btn btn-atk" id="btn-atk">ATK</button>
-        </div>
+  <div class="controls">
+    <div class="shop-title">씨앗 구매 & 도구 선택</div>
+    <div class="btn-group">
+      <button id="btn-seed-1" onclick="selectTool('seed1')">🌻 해바라기 (10G)</button>
+      <button id="btn-seed-2" onclick="selectTool('seed2')">🌷 튤립 (30G)</button>
+      <button class="secondary" onclick="selectTool('water')">💧 물주기</button>
+      <button class="secondary" style="background:#f57c00;" onclick="selectTool('harvest')">✂️ 수확하기</button>
     </div>
+    <div class="status-text" id="status">선택된 도구: 물주기</div>
+  </div>
+</div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const wrapper = document.getElementById('game-wrapper');
-
-let size = 300;
-function resizeGame() {
-    size = Math.min(window.innerWidth - 20, window.innerHeight * 0.55);
-    size = Math.max(280, Math.min(size, 450));
-    wrapper.style.width = size + 'px';
-    wrapper.style.height = size + 'px';
-    canvas.width = size;
-    canvas.height = size;
-}
-window.addEventListener('resize', resizeGame);
-resizeGame();
-
-const GROUND_Y = size * 0.8;
-
-// --- 멀티터치 입력 관리 ---
-const input = { x: 0, atk: false, skill: false, jump: false };
-
-const joyZone = document.getElementById('joystick-zone');
-const joyKnob = document.getElementById('joystick-knob');
-let joyTouchId = null;
-let joyStart = { x: 0, y: 0 };
-const joyMaxRadius = 35;
-
-joyZone.addEventListener('touchstart', (e) => {
-    if (joyTouchId === null) {
-        const touch = e.changedTouches[0];
-        joyTouchId = touch.identifier;
-        const rect = joyZone.getBoundingClientRect();
-        joyStart = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-        updateJoystick(touch);
-    }
-    e.preventDefault();
-}, { passive: false });
-
-window.addEventListener('touchmove', (e) => {
-    if (joyTouchId === null) return;
-    for (let touch of e.changedTouches) {
-        if (touch.identifier === joyTouchId) {
-            updateJoystick(touch);
-            break;
-        }
-    }
-}, { passive: false });
-
-window.addEventListener('touchend', (e) => {
-    if (joyTouchId === null) return;
-    for (let touch of e.changedTouches) {
-        if (touch.identifier === joyTouchId) {
-            joyTouchId = null;
-            input.x = 0;
-            joyKnob.style.transform = `translate(0px, 0px)`;
-            break;
-        }
-    }
-});
-
-function updateJoystick(touch) {
-    let dx = touch.clientX - joyStart.x;
-    let dist = Math.abs(dx);
-    if (dist > joyMaxRadius) dx = (dx / dist) * joyMaxRadius;
-    joyKnob.style.transform = `translate(${dx}px, 0px)`;
-    input.x = dx / joyMaxRadius;
-}
-
-function bindBtn(id, key) {
-    const btn = document.getElementById(id);
-    btn.addEventListener('touchstart', (e) => { 
-        e.preventDefault(); 
-        input[key] = true; 
-    });
-    btn.addEventListener('touchend', (e) => { e.preventDefault(); input[key] = false; });
-}
-bindBtn('btn-atk', 'atk');
-bindBtn('btn-skill', 'skill');
-bindBtn('btn-jump', 'jump');
-
-// --- 화면 흔들림 및 대미지 텍스트 ---
-let screenShakeTimer = 0;
-let screenShakeIntensity = 0;
-function triggerShake(duration, intensity) {
-    screenShakeTimer = duration;
-    screenShakeIntensity = intensity;
-}
-
-const damageTexts = [];
-function addDamageText(x, y, text, isCritical = false) {
-    damageTexts.push({
-        x: x + (Math.random() - 0.5) * 15,
-        y: y - 20,
-        text: text,
-        life: 25,
-        color: isCritical ? '#ff0000' : '#000000',
-        scale: isCritical ? 1.3 : 1.0
-    });
-}
-
-// 검 잔상 및 스킬 이펙트 저장 배열
-const swordTrails = [];
-const skillWaves = [];
-
-// --- 플레이어 클래스 ---
-class Player {
-    constructor() {
-        this.width = 28;
-        this.height = 42;
-        this.x = size * 0.25;
-        this.y = GROUND_Y - this.height;
-        this.vy = 0;
-        this.speed = 3.2;
-        this.facing = 1;
-        this.isGrounded = true;
-
-        // 평타 콤보 시스템 (4단, 1.5초 리셋)
-        this.state = 'idle'; // idle, attack, skill
-        this.comboStep = 1;  // 1 ~ 4단
-        this.atkAnimTimer = 0;
-        this.comboResetTimer = 0; // 1.5초(90프레임) 리셋 타이머
-
-        // 1스킬 지속 공격 관리
-        this.skillTimer = 0;
-        this.skillHitInterval = 0;
-
-        // 공중 홀드 상태
-        this.isHoldAction = false;
-        this.holdTimer = 0;
-
-        this.frameCounter = 0; // 8프레임 모션 카운터
-    }
-
-    update() {
-        if (this.isHoldAction) {
-            this.holdTimer--;
-            if (this.holdTimer <= 0) this.isHoldAction = false;
-            return;
-        }
-
-        // 콤보 리셋 타이머 감소 (1.5초 = 90프레임 동안 공격 안 하면 1타로 리셋)
-        if (this.comboResetTimer > 0) {
-            this.comboResetTimer--;
-            if (this.comboResetTimer === 0) {
-                this.comboStep = 1;
-            }
-        }
-
-        // 1스킬 사용 중 (움직임 가능, 지속 데미지 및 공중 홀드)
-        if (this.state === 'skill') {
-            this.x += input.x * (this.speed * 0.7);
-            this.x = Math.max(10, Math.min(size - this.width - 10, this.x));
-
-            this.skillTimer--;
-            this.skillHitInterval++;
-            if (this.skillHitInterval >= 6) {
-                this.skillHitInterval = 0;
-                triggerSkillTick();
-            }
-
-            if (this.skillTimer <= 0) {
-                this.state = 'idle';
-            }
-            return;
-        }
-
-        // 일반 이동 (8프레임 엄격 연동)
-        if (this.state !== 'attack') {
-            this.x += input.x * this.speed;
-            if (Math.abs(input.x) > 0.1) {
-                this.facing = input.x > 0 ? 1 : -1;
-                this.frameCounter++;
-            } else {
-                this.frameCounter = 0;
-            }
-        }
-
-        // 점프 입력
-        let jumpJustPressed = input.jump && this.isGrounded;
-        if (jumpJustPressed) {
-            this.vy = -9.5;
-            this.isGrounded = false;
-            input.jump = false;
-        }
-
-        // 중력
-        this.y += this.vy;
-        if (!this.isGrounded) {
-            this.vy += 0.55;
-            if (this.y >= GROUND_Y - this.height) {
-                this.y = GROUND_Y - this.height;
-                this.vy = 0;
-                this.isGrounded = true;
-            }
-        }
-
-        this.x = Math.max(10, Math.min(size - this.width - 10, this.x));
-
-        // 평타 공격 입력 (총 4단, 모션 다름)
-        if (input.atk && this.state !== 'attack') {
-            this.state = 'attack';
-            this.atkAnimTimer = 14; // 8프레임 기반 애니메이션 길이
-            this.comboResetTimer = 90; // 1.5초 리셋 타이머 재설정
-
-            // 4타째에 점프를 하며 공격했는지 여부 체크
-            let isAirAttack = !this.isGrounded || jumpJustPressed;
-            executeAttackCombo(this.comboStep, isAirAttack);
-
-            input.atk = false;
-        }
-
-        if (this.state === 'attack') {
-            this.atkAnimTimer--;
-            if (this.atkAnimTimer <= 0) {
-                this.state = 'idle';
-                this.comboStep++;
-                if (this.comboStep > 4) {
-                    this.comboStep = 1;
-                }
-            }
-        }
-
-        // 스킬 입력
-        if (input.skill) {
-            this.state = 'skill';
-            this.skillTimer = 50;
-            this.skillHitInterval = 0;
-            // 화려한 스킬 검기 웨이브 이펙트 생성
-            skillWaves.push({ x: this.x + this.width / 2, y: this.y + 15, radius: 15, maxRadius: 65, alpha: 1 });
-            triggerShake(6, 4);
-            input.skill = false;
-        }
-    }
-
-    draw() {
-        ctx.save();
-        ctx.translate(this.x + this.width / 2, this.y + this.height);
-
-        // --- 8프레임 모션 애니메이션 ---
-        let animFrame = Math.floor((this.frameCounter / 4) % 8);
-        let bounce = Math.abs(Math.sin(animFrame * (Math.PI / 4))) * 2.5;
-        if (Math.abs(input.x) < 0.1 && this.state === 'idle') bounce = 0;
-
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#000000';
-
-        // 머리
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(-9, -40 - bounce, 18, 16);
-        ctx.strokeRect(-9, -40 - bounce, 18, 16);
-
-        // 눈
-        ctx.fillStyle = '#000000';
-        let eyePos = this.facing === 1 ? 2 : -6;
-        ctx.fillRect(eyePos, -35 - bounce, 4, 4);
-
-        // 몸통
-        ctx.fillStyle = this.state === 'skill' ? '#333333' : '#000000';
-        ctx.fillRect(-7, -24 - bounce, 14, 15);
-
-        // 다리
-        ctx.fillStyle = '#ffffff';
-        let legOffsetA = Math.sin(animFrame * (Math.PI / 4)) * 3.5;
-        let legOffsetB = -legOffsetA;
-        ctx.fillRect(-6 + legOffsetA, -9, 5, 9);
-        ctx.strokeRect(-6 + legOffsetA, -9, 5, 9);
-        ctx.fillRect(1 + legOffsetB, -9, 5, 9);
-        ctx.strokeRect(1 + legOffsetB, -9, 5, 9);
-
-        // --- 정교한 검 모델 및 각기 다른 4단 평타 모션 ---
-        ctx.save();
-        ctx.translate(0, -16 - bounce);
-
-        let swordAngle = 0;
-        let progress = this.state === 'attack' ? (14 - this.atkAnimTimer) / 14 : 0; // 0 ~ 1
-
-        if (this.state === 'attack') {
-            if (this.comboStep === 1) {
-                // 1타: 전방 찌르기 모션
-                swordAngle = (this.facing === 1 ? 0 : Math.PI);
-            } else if (this.comboStep === 2) {
-                // 2타: 아래에서 위로 올려베기 모션
-                swordAngle = (-Math.PI / 3 + progress * Math.PI * 0.8) * this.facing;
-            } else if (this.comboStep === 3) {
-                // 3타: 위에서 아래로 내리찍기 모션
-                swordAngle = (Math.PI / 3 - progress * Math.PI * 0.8) * this.facing;
-            } else if (this.comboStep === 4) {
-                // 4타 (런처): 360도 회전 베기 모션
-                swordAngle = (progress * Math.PI * 2) * this.facing;
-            }
-        } else if (this.state === 'skill') {
-            swordAngle = (Date.now() / 35) * this.facing;
-        } else {
-            swordAngle = (this.facing * Math.PI) / 6;
-        }
-
-        ctx.rotate(swordAngle);
-
-        // 정밀 도트 검 모델 렌더링
-        ctx.fillStyle = '#442211'; // 검자루
-        ctx.fillRect(-2, 0, 4, 8);
-        ctx.fillStyle = '#111111'; // 코스가드
-        ctx.fillRect(-6, 0, 12, 3);
-        ctx.fillStyle = '#ffffff'; // 칼날 (윤곽선)
-        ctx.fillRect(-3, -24, 6, 24);
-        ctx.strokeRect(-3, -24, 6, 24);
-        ctx.fillStyle = '#cccccc'; // 칼날 내부
-        ctx.fillRect(-1, -22, 2, 20);
-
-        // 정확한 칼끝(Tip) 위치 계산하여 잔상 남기기
-        if (this.state === 'attack' || this.state === 'skill') {
-            let tipOffsetX = Math.sin(swordAngle) * 26 * this.facing;
-            let tipOffsetY = -Math.cos(swordAngle) * 26;
-            let tipX = this.x + this.width / 2 + tipOffsetX;
-            let tipY = this.y + this.height - 16 - bounce + tipOffsetY;
-            swordTrails.push({ x: tipX, y: tipY, alpha: 0.7 });
-        }
-
-        ctx.restore();
-        ctx.restore();
-    }
-}
-
-// --- 더미 클래스 (부활 및 피격 관리) ---
-class Dummy {
-    constructor() {
-        this.width = 28;
-        this.height = 42;
-        this.resetPosition();
-        this.vy = 0;
-        this.hp = 100;
-        this.maxHp = 100;
-        this.hitTimer = 0;
-        this.vx = 0;
-        this.isAirborne = false;
-        this.isHold = false;
-        this.holdTimer = 0;
-    }
-
-    resetPosition() {
-        this.x = size * 0.7;
-        this.y = GROUND_Y - this.height;
-        this.hp = this.maxHp;
-        this.vy = 0;
-        this.vx = 0;
-        this.isAirborne = false;
-        this.isHold = false;
-    }
-
-    update() {
-        // 체력이 다 닳으면(죽으면) 원래 자리로 리셋
-        if (this.hp <= 0) {
-            this.resetPosition();
-            addDamageText(size * 0.7, GROUND_Y - 50, "RESPAWN!", true);
-            return;
-        }
-
-        if (this.isHold) {
-            this.holdTimer--;
-            if (this.holdTimer <= 0) this.isHold = false;
-            return;
-        }
-
-        this.x += this.vx;
-        this.vx *= 0.8;
-        this.x = Math.max(size * 0.4, Math.min(size - this.width - 10, this.x));
-
-        // 공중 체공 및 낙하
-        if (this.isAirborne) {
-            this.y += this.vy;
-            this.vy += 0.55;
-            if (this.y >= GROUND_Y - this.height) {
-                this.y = GROUND_Y - this.height;
-                this.vy = 0;
-                this.isAirborne = false;
-            }
-        }
-
-        if (this.hitTimer > 0) this.hitTimer--;
-        if (this.hp < this.maxHp && this.hitTimer === 0 && !this.isAirborne) {
-            this.hp += 0.2;
-        }
-        document.getElementById('dummy-hp').style.width = `${(this.hp / this.maxHp) * 100}%`;
-    }
-
-    draw() {
-        ctx.save();
-        let shake = this.hitTimer > 0 ? (Math.random() - 0.5) * 5 : 0;
-        ctx.translate(this.x + shake, this.y);
-
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#000';
-        ctx.fillStyle = this.hitTimer > 0 ? '#ff4444' : '#eeeeee';
-
-        ctx.fillRect(0, 0, this.width, this.height);
-        ctx.strokeRect(0, 0, this.width, this.height);
-
-        ctx.beginPath();
-        ctx.moveTo(7, 10); ctx.lineTo(21, 22);
-        ctx.moveTo(21, 10); ctx.lineTo(7, 22);
-        ctx.stroke();
-
-        ctx.restore();
-    }
-}
-
-// --- 4단 평타 및 런처 로직 ---
-function executeAttackCombo(step, isAirAttack) {
-    let damage = 8 + step * 4;
-    let range = 45;
-
-    let dx = (dummy.x + dummy.width / 2) - (player.x + player.width / 2);
-    let dy = Math.abs((dummy.y + dummy.height / 2) - (player.y + player.height / 2));
-
-    if (Math.abs(dx) < range && dy < 45) {
-        dummy.hp = Math.max(0, dummy.hp - damage);
-        dummy.hitTimer = 10;
-        addDamageText(dummy.x + dummy.width / 2, dummy.y, damage, step === 4);
-
-        if (step < 4) {
-            // 1~3타: 조금씩 밀림
-            dummy.vx = player.facing * 3.5;
-        } else {
-            // 4타째 공격
-            if (isAirAttack) {
-                // 점프하면서 4타 공격 시 상대가 공중으로 뜸!
-                dummy.isAirborne = true;
-                dummy.vy = -12;
-                dummy.vx = player.facing * 4;
-                addDamageText(dummy.x + dummy.width / 2, dummy.y - 20, "AIR LAUNCH!", true);
-                triggerShake(8, 5);
-            } else {
-                // 지상 4타: 강하게 밀침
-                dummy.vx = player.facing * 9;
-                triggerShake(5, 3);
-            }
-        }
-    }
-}
-
-// 1스킬 지속 타격 및 공중 홀드
-function triggerSkillTick() {
-    let dx = (dummy.x + dummy.width / 2) - (player.x + player.width / 2);
-    let dy = Math.abs((dummy.y + dummy.height / 2) - (player.y + player.height / 2));
-
-    if (Math.abs(dx) < 65 && dy < 50) {
-        dummy.hp = Math.max(0, dummy.hp - 4);
-        dummy.hitTimer = 6;
-        addDamageText(dummy.x + dummy.width / 2, dummy.y, 4);
-
-        if (!dummy.isAirborne && player.y < GROUND_Y - player.height - 10) {
-            dummy.isHold = true;
-            dummy.holdTimer = 25;
-            player.isHoldAction = true;
-            player.holdTimer = 25;
-            addDamageText(dummy.x, dummy.y - 30, "SKILL LOCK!", true);
-        } else {
-            dummy.y -= 2;
-            dummy.vx = player.facing * 1.5;
-        }
-    }
-}
-
-// --- 이펙트 및 잔상 렌더링 ---
-function updateAndDrawEffects() {
-    // 칼 잔상(Trail) 렌더링
-    for (let i = swordTrails.length - 1; i >= 0; i--) {
-        let t = swordTrails[i];
-        ctx.fillStyle = `rgba(0, 0, 0, ${t.alpha})`;
-        ctx.fillRect(t.x, t.y, 3, 3);
-        t.alpha -= 0.14;
-        if (t.alpha <= 0) swordTrails.splice(i, 1);
-    }
-
-    // 스킬 검기 웨이브 렌더링
-    for (let i = skillWaves.length - 1; i >= 0; i--) {
-        let w = skillWaves[i];
-        ctx.save();
-        ctx.translate(w.x, w.y);
-        ctx.scale(1, 0.4); // 2.5D 타원 입체감
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = `rgba(0, 0, 0, ${w.alpha})`;
-        ctx.beginPath();
-        ctx.arc(0, 0, w.radius, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-
-        w.radius += 4;
-        w.alpha -= 0.08;
-        if (w.alpha <= 0) skillWaves.splice(i, 1);
-    }
-
-    // 대미지 텍스트 렌더링
-    for (let i = damageTexts.length - 1; i >= 0; i--) {
-        let dt = damageTexts[i];
-        ctx.save();
-        ctx.font = `bold ${Math.round(14 * dt.scale)}px monospace`;
-        ctx.fillStyle = dt.color;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        ctx.strokeText(`-${dt.text}`, dt.x, dt.y);
-        ctx.fillText(`-${dt.text}`, dt.x, dt.y);
-        ctx.restore();
-
-        dt.y -= 1.2;
-        dt.life--;
-        if (dt.life <= 0) damageTexts.splice(i, 1);
-    }
-}
-
-function drawBackground() {
-    ctx.clearRect(0, 0, size, size);
-
-    if (screenShakeTimer > 0) {
-        let sx = (Math.random() - 0.5) * screenShakeIntensity;
-        let sy = (Math.random() - 0.5) * screenShakeIntensity;
-        ctx.translate(sx, sy);
-        screenShakeTimer--;
-    }
-
-    // 바닥 선
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, GROUND_Y);
-    ctx.lineTo(size, GROUND_Y);
-    ctx.stroke();
-}
-
-// --- 게임 루프 ---
-const player = new Player();
-const dummy = new Dummy();
-
-function loop() {
-    ctx.save();
+  let gold = 50;
+  let currentTool = 'water'; // water, harvest, seed1, seed2
+
+  // 9개의 화단 상태 관리
+  // state: 'empty', 'planted', 'bloomed'
+  const plots = Array(9).fill(null).map(() => ({
+    type: null,
+    state: 'empty',
+    water: 0,
+    timer: null
+  }));
+
+  const plantData = {
+    seed1: { name: '해바라기', cost: 10, reward: 25, seedIcon: '🌱', bloomIcon: '🌻', waterNeeded: 3 },
+    seed2: { name: '튤립', cost: 30, reward: 80, seedIcon: '🌱', bloomIcon: '🌷', waterNeeded: 5 }
+  };
+
+  function updateUI() {
+    document.getElementById('gold').innerText = gold;
     
-    player.update();
-    dummy.update();
+    // 버튼 구매 가능 여부
+    document.getElementById('btn-seed-1').disabled = gold < plantData.seed1.cost;
+    document.getElementById('btn-seed-2').disabled = gold < plantData.seed2.cost;
 
-    drawBackground();
-    dummy.draw();
-    player.draw();
-    updateAndDrawEffects();
+    const gardenEl = document.getElementById('garden');
+    gardenEl.innerHTML = '';
 
-    ctx.restore();
-    requestAnimationFrame(loop);
-}
+    plots.forEach((plot, index) => {
+      const plotEl = document.createElement('div');
+      plotEl.className = 'plot';
+      plotEl.onclick = () => handlePlotClick(index);
 
-loop();
+      let icon = '';
+      let waterWidth = 0;
+
+      if (plot.state === 'planted') {
+        icon = plantData[plot.type].seedIcon;
+        waterWidth = (plot.water / plantData[plot.type].waterNeeded) * 100;
+      } else if (plot.state === 'bloomed') {
+        icon = plantData[plot.type].bloomIcon;
+        waterWidth = 100;
+      }
+
+      plotEl.innerHTML = `
+        <div class="plant-icon">${icon}</div>
+        ${plot.state === 'planted' ? `
+          <div class="water-bar">
+            <div class="water-fill" style="width: ${waterWidth}%"></div>
+          </div>
+        ` : ''}
+      `;
+
+      gardenEl.appendChild(plotEl);
+    });
+  }
+
+  function selectTool(tool) {
+    currentTool = tool;
+    const statusEl = document.getElementById('status');
+    if (tool === 'water') statusEl.innerText = '선택된 도구: 💧 물주기';
+    else if (tool === 'harvest') statusEl.innerText = '선택된 도구: ✂️ 수확하기';
+    else if (tool === 'seed1') statusEl.innerText = `선택된 씨앗: 🌻 해바라기 (${plantData.seed1.cost}G)`;
+    else if (tool === 'seed2') statusEl.innerText = `선택된 씨앗: 🌷 튤립 (${plantData.seed2.cost}G)`;
+  }
+
+  function handlePlotClick(index) {
+    const plot = plots[index];
+
+    if (currentTool.startsWith('seed')) {
+      if (plot.state !== 'empty') return;
+      const data = plantData[currentTool];
+      if (gold < data.cost) return;
+
+      gold -= data.cost;
+      plot.state = 'planted';
+      plot.type = currentTool;
+      plot.water = 0;
+    } 
+    else if (currentTool === 'water') {
+      if (plot.state !== 'planted') return;
+      const data = plantData[plot.type];
+      plot.water += 1;
+
+      if (plot.water >= data.waterNeeded) {
+        plot.state = 'bloomed';
+      }
+    } 
+    else if (currentTool === 'harvest') {
+      if (plot.state !== 'bloomed') return;
+      const data = plantData[plot.type];
+      gold += data.reward;
+      plot.state = 'empty';
+      plot.type = null;
+      plot.water = 0;
+    }
+
+    updateUI();
+  }
+
+  updateUI();
 </script>
 </body>
 </html>
