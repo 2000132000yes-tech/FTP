@@ -1,256 +1,752 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Grow a Garden</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #eef7e8;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      color: #2d4030;
-    }
-    #game-container {
-      width: 100%;
-      max-width: 480px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    header {
-      background: #ffffff;
-      padding: 16px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .gold-display {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #2e7d32;
-    }
-    .garden-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-    .plot {
-      aspect-ratio: 1;
-      background-color: #8d6e63;
-      border: 4px solid #6d4c41;
-      border-radius: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      cursor: pointer;
-      box-shadow: inset 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .plot .plant-icon {
-      font-size: 2.5rem;
-      transition: transform 0.2s ease;
-    }
-    .plot .water-bar {
-      position: absolute;
-      bottom: 6px;
-      width: 80%;
-      height: 6px;
-      background: rgba(255,255,255,0.4);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .plot .water-fill {
-      height: 100%;
-      background: #29b6f6;
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-    .controls {
-      background: #ffffff;
-      padding: 16px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .shop-title {
-      font-size: 1rem;
-      font-weight: 700;
-      margin: 0 0 4px 0;
-    }
-    .btn-group {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-    button {
-      padding: 12px 8px;
-      border: none;
-      border-radius: 12px;
-      background: #4caf50;
-      color: white;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-    }
-    button:active {
-      transform: scale(0.97);
-    }
-    button.secondary {
-      background: #0288d1;
-    }
-    button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-    .status-text {
-      font-size: 0.85rem;
-      color: #666;
-      text-align: center;
-      min-height: 1.2em;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Grow a Garden - Roblox Style</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1a1a1a;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #2b580c, #638c27);
+        }
+
+        canvas {
+            display: block;
+            background: #88c057;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Roblox Top Bar */
+        .top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            font-weight: bold;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .menu-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .stats-display {
+            display: flex;
+            gap: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 12px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Roblox Style Windows / Modals */
+        .roblox-window {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%;
+            max-width: 450px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 20;
+            opacity: 0;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .roblox-window.active {
+            display: flex;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        .window-header {
+            background: #232527;
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .close-btn {
+            background: #ff4d4d;
+            border: none;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #ff1a1a;
+        }
+
+        .window-body {
+            padding: 15px;
+            max-height: 350px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: #e4e4e4;
+        }
+
+        .slot-card {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 2px solid #ccc;
+            cursor: pointer;
+            transition: transform 0.1s, border-color 0.2s;
+        }
+
+        .slot-card:hover {
+            transform: translateY(-3px);
+            border-color: #007acc;
+        }
+
+        .slot-card img, .slot-card .icon-placeholder {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .slot-card span {
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+        }
+
+        .slot-card button {
+            margin-top: 5px;
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+        }
+
+        .slot-card button:hover {
+            background: #218838;
+        }
+
+        /* Bottom Control Bar for Mobile/Desktop */
+        .bottom-action-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .action-icon-btn {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+
+        .action-icon-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+            transform: scale(1.05);
+        }
+
+        .action-icon-btn span {
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        /* Mobile Virtual Joystick container */
+        #virtual-joystick {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: none;
+            z-index: 10;
+            touch-action: none;
+        }
+
+        #joystick-handle {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Notification Toast */
+        #toast {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 30;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+    </style>
 </head>
 <body>
 
-<div id="game-container">
-  <header>
-    <div>🌱 <strong>정원 키우기</strong></div>
-    <div class="gold-display">💰 <span id="gold">50</span>G</div>
-  </header>
+    <div id="game-container">
+        <!-- Roblox Top Bar -->
+        <div class="top-bar">
+            <button class="menu-btn" onclick="toggleWindow('shop-window')">🛒 상점</button>
+            <div class="stats-display">
+                <div class="stat-item" id="coin-display">🪙 100 G</div>
+                <div class="stat-item" id="gem-display">💎 10 Gem</div>
+            </div>
+            <button class="menu-btn" onclick="toggleWindow('inventory-window')">🎒 인벤토리</button>
+        </div>
 
-  <div class="garden-grid" id="garden"></div>
+        <!-- Toast Message -->
+        <div id="toast">씨앗을 심었습니다!</div>
 
-  <div class="controls">
-    <div class="shop-title">씨앗 구매 & 도구 선택</div>
-    <div class="btn-group">
-      <button id="btn-seed-1" onclick="selectTool('seed1')">🌻 해바라기 (10G)</button>
-      <button id="btn-seed-2" onclick="selectTool('seed2')">🌷 튤립 (30G)</button>
-      <button class="secondary" onclick="selectTool('water')">💧 물주기</button>
-      <button class="secondary" style="background:#f57c00;" onclick="selectTool('harvest')">✂️ 수확하기</button>
+        <!-- Canvas for Game Rendering -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Bottom Action Bar -->
+        <div class="bottom-action-bar">
+            <div class="action-icon-btn" onclick="toggleWindow('inventory-window')">
+                🌱<span>씨앗</span>
+            </div>
+            <div class="action-icon-btn" onclick="toggleWindow('shop-window')">
+                🏪<span>상점</span>
+            </div>
+            <div class="action-icon-btn" onclick="toggleAction('water')">
+                💧<span>물주기</span>
+            </div>
+            <div class="action-icon-btn" onclick="toggleAction('harvest')">
+                ✂️<span>수확</span>
+            </div>
+        </div>
+
+        <!-- Mobile Joystick -->
+        <div id="virtual-joystick">
+            <div id="joystick-handle"></div>
+        </div>
+
+        <!-- Shop Window -->
+        <div id="shop-window" class="roblox-window">
+            <div class="window-header">
+                <span>가든 상점 (Garden Shop)</span>
+                <button class="close-btn" onclick="toggleWindow('shop-window')">X</button>
+            </div>
+            <div class="window-body" id="shop-items-container">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <!-- Inventory Window -->
+        <div id="inventory-window" class="roblox-window">
+            <div class="window-header">
+                <span>인벤토리 (Inventory)</span>
+                <button class="close-btn" onclick="toggleWindow('inventory-window')">X</button>
+            </div>
+            <div class="window-body" id="inventory-items-container">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
     </div>
-    <div class="status-text" id="status">선택된 도구: 물주기</div>
-  </div>
-</div>
 
-<script>
-  let gold = 50;
-  let currentTool = 'water'; // water, harvest, seed1, seed2
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-  // 9개의 화단 상태 관리
-  // state: 'empty', 'planted', 'bloomed'
-  const plots = Array(9).fill(null).map(() => ({
-    type: null,
-    state: 'empty',
-    water: 0,
-    timer: null
-  }));
+        // Responsive Canvas Setup
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-  const plantData = {
-    seed1: { name: '해바라기', cost: 10, reward: 25, seedIcon: '🌱', bloomIcon: '🌻', waterNeeded: 3 },
-    seed2: { name: '튤립', cost: 30, reward: 80, seedIcon: '🌱', bloomIcon: '🌷', waterNeeded: 5 }
-  };
+        // Game State
+        const state = {
+            coins: 150,
+            gems: 5,
+            currentTool: 'plant', // 'plant', 'water', 'harvest'
+            selectedSeed: '해바라기',
+            inventory: {
+                '해바라기 씨앗': 5,
+                '장미 씨앗': 3,
+                '황금사과 씨앗': 1
+            },
+            seedsData: {
+                '해바라기 씨앗': { price: 20, growTime: 5, reward: 45, icon: '🌻' },
+                '장미 씨앗': { price: 40, growTime: 8, reward: 90, icon: '🌹' },
+                '황금사과 씨앗': { price: 100, growTime: 15, reward: 250, icon: '🍎' }
+            }
+        };
 
-  function updateUI() {
-    document.getElementById('gold').innerText = gold;
-    
-    // 버튼 구매 가능 여부
-    document.getElementById('btn-seed-1').disabled = gold < plantData.seed1.cost;
-    document.getElementById('btn-seed-2').disabled = gold < plantData.seed2.cost;
+        // Player Model (Roblox Blocky Style)
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: 32,
+            speed: 3.5,
+            color: '#007acc',
+            pantsColor: '#1b263b',
+            headColor: '#f1c40f',
+            dir: 0 // angle or direction
+        };
 
-    const gardenEl = document.getElementById('garden');
-    gardenEl.innerHTML = '';
+        // Garden Plots / Tiles
+        const plots = [];
+        const plotSize = 70;
+        const gridCols = 5;
+        const gridRows = 4;
 
-    plots.forEach((plot, index) => {
-      const plotEl = document.createElement('div');
-      plotEl.className = 'plot';
-      plotEl.onclick = () => handlePlotClick(index);
+        function initGarden() {
+            const startX = (canvas.width - (gridCols * (plotSize + 15))) / 2 + plotSize / 2;
+            const startY = (canvas.height - (gridRows * (plotSize + 15))) / 2 + plotSize / 2;
 
-      let icon = '';
-      let waterWidth = 0;
+            for (let r = 0; r < gridRows; r++) {
+                for (let c = 0; c < gridCols; c++) {
+                    plots.push({
+                        x: startX + c * (plotSize + 15),
+                        y: startY + r * (plotSize + 15),
+                        size: plotSize,
+                        state: 'empty', // 'empty', 'growing', 'ready'
+                        seedType: null,
+                        plantedTime: 0,
+                        growTime: 0,
+                        watered: false,
+                        progress: 0
+                    });
+                }
+            }
+        }
+        initGarden();
 
-      if (plot.state === 'planted') {
-        icon = plantData[plot.type].seedIcon;
-        waterWidth = (plot.water / plantData[plot.type].waterNeeded) * 100;
-      } else if (plot.state === 'bloomed') {
-        icon = plantData[plot.type].bloomIcon;
-        waterWidth = 100;
-      }
+        // Input Handling (Keyboard & Touch/Mouse)
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
 
-      plotEl.innerHTML = `
-        <div class="plant-icon">${icon}</div>
-        ${plot.state === 'planted' ? `
-          <div class="water-bar">
-            <div class="water-fill" style="width: ${waterWidth}%"></div>
-          </div>
-        ` : ''}
-      `;
+        // Mobile Joystick Logic
+        const joystick = document.getElementById('virtual-joystick');
+        const handle = document.getElementById('joystick-handle');
+        let joyActive = false;
+        let joyVector = { x: 0, y: 0 };
+        let joyCenter = { x: 0, y: 0 };
 
-      gardenEl.appendChild(plotEl);
-    });
-  }
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            joystick.style.display = 'block';
+            
+            joystick.addEventListener('touchstart', (e) => {
+                joyActive = true;
+                const rect = joystick.getBoundingClientRect();
+                joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                updateJoystick(e.touches[0].clientX, e.touches[0].clientY);
+            });
 
-  function selectTool(tool) {
-    currentTool = tool;
-    const statusEl = document.getElementById('status');
-    if (tool === 'water') statusEl.innerText = '선택된 도구: 💧 물주기';
-    else if (tool === 'harvest') statusEl.innerText = '선택된 도구: ✂️ 수확하기';
-    else if (tool === 'seed1') statusEl.innerText = `선택된 씨앗: 🌻 해바라기 (${plantData.seed1.cost}G)`;
-    else if (tool === 'seed2') statusEl.innerText = `선택된 씨앗: 🌷 튤립 (${plantData.seed2.cost}G)`;
-  }
+            window.addEventListener('touchmove', (e) => {
+                if (!joyActive) return;
+                for (let i = 0; i < e.touches.length; i++) {
+                    updateJoystick(e.touches[i].clientX, e.touches[i].clientY);
+                }
+            });
 
-  function handlePlotClick(index) {
-    const plot = plots[index];
+            window.addEventListener('touchend', () => {
+                joyActive = false;
+                joyVector = { x: 0, y: 0 };
+                handle.style.transform = `translate(0px, 0px)`;
+            });
+        }
 
-    if (currentTool.startsWith('seed')) {
-      if (plot.state !== 'empty') return;
-      const data = plantData[currentTool];
-      if (gold < data.cost) return;
+        function updateJoystick(clientX, clientY) {
+            let dx = clientX - joyCenter.x;
+            let dy = clientY - joyCenter.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const maxRadius = 35;
 
-      gold -= data.cost;
-      plot.state = 'planted';
-      plot.type = currentTool;
-      plot.water = 0;
-    } 
-    else if (currentTool === 'water') {
-      if (plot.state !== 'planted') return;
-      const data = plantData[plot.type];
-      plot.water += 1;
+            if (dist > maxRadius) {
+                dx = (dx / dist) * maxRadius;
+                dy = (dy / dist) * maxRadius;
+            }
 
-      if (plot.water >= data.waterNeeded) {
-        plot.state = 'bloomed';
-      }
-    } 
-    else if (currentTool === 'harvest') {
-      if (plot.state !== 'bloomed') return;
-      const data = plantData[plot.type];
-      gold += data.reward;
-      plot.state = 'empty';
-      plot.type = null;
-      plot.water = 0;
-    }
+            handle.style.transform = `translate(${dx}px, ${dy}px)`;
+            joyVector = { x: dx / maxRadius, y: dy / maxRadius };
+        }
 
-    updateUI();
-  }
+        // Canvas Click / Tap Interaction for Farming
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
 
-  updateUI();
-</script>
+            // Check plot clicks
+            plots.forEach(plot => {
+                const dist = Math.hypot(clickX - plot.x, clickY - plot.y);
+                if (dist < plot.size / 2 + 10) {
+                    handlePlotInteraction(plot);
+                }
+            });
+        });
+
+        function handlePlotInteraction(plot) {
+            if (plot.state === 'empty') {
+                // Plant seed
+                if (state.inventory[state.selectedSeed] && state.inventory[state.selectedSeed] > 0) {
+                    state.inventory[state.selectedSeed]--;
+                    plot.state = 'growing';
+                    plot.seedType = state.selectedSeed;
+                    plot.plantedTime = Date.now();
+                    plot.growTime = state.seedsData[state.selectedSeed].growTime * 1000;
+                    plot.watered = false;
+                    showToast(`${state.selectedSeed}을(를) 심었습니다!`);
+                } else {
+                    showToast('씨앗이 부족합니다! 상점에서 구매하세요.');
+                }
+            } else if (plot.state === 'growing' && !plot.watered) {
+                // Water plant
+                plot.watered = true;
+                showToast('물을 주었습니다! 성장이 빨라집니다.');
+            } else if (plot.state === 'ready') {
+                // Harvest
+                const reward = state.seedsData[plot.seedType].reward;
+                state.coins += reward;
+                plot.state = 'empty';
+                plot.seedType = null;
+                plot.watered = false;
+                showToast(`수확 완료! +${reward} G`);
+                updateUI();
+            }
+        }
+
+        // UI Window Toggles
+        function toggleWindow(windowId) {
+            const win = document.getElementById(windowId);
+            win.classList.toggle('active');
+            if (win.classList.contains('active')) {
+                renderShop();
+                renderInventory();
+            }
+        }
+
+        function toggleAction(tool) {
+            state.currentTool = tool;
+            showToast(`도구 변경: ${tool === 'water' ? '물뿌리개' : tool === 'harvest' ? '수확기' : '심기'}`);
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            toast.innerText = text;
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2000);
+        }
+
+        // Render Shop Items
+        function renderShop() {
+            const container = document.getElementById('shop-items-container');
+            container.innerHTML = '';
+            
+            for (let [seedName, data] of Object.entries(state.seedsData)) {
+                const card = document.createElement('div');
+                card.className = 'slot-card';
+                card.innerHTML = `
+                    <div class="icon-placeholder">${data.icon}</div>
+                    <span>${seedName}</span>
+                    <span style="color:#007acc; font-weight:bold;">${data.price} G</span>
+                    <button onclick="buySeed('${seedName}')">구매</button>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function buySeed(seedName) {
+            const price = state.seedsData[seedName].price;
+            if (state.coins >= price) {
+                state.coins -= price;
+                state.inventory[seedName] = (state.inventory[seedName] || 0) + 1;
+                updateUI();
+                showToast(`${seedName} 구매 완료!`);
+            } else {
+                showToast('코인이 부족합니다!');
+            }
+        }
+
+        // Render Inventory Items
+        function renderInventory() {
+            const container = document.getElementById('inventory-items-container');
+            container.innerHTML = '';
+
+            for (let [item, count] of Object.entries(state.inventory)) {
+                if (count > 0) {
+                    const data = state.seedsData[item] || { icon: '🌱' };
+                    const card = document.createElement('div');
+                    card.className = 'slot-card';
+                    card.innerHTML = `
+                        <div class="icon-placeholder">${data.icon}</div>
+                        <span>${item}</span>
+                        <span style="color:#555">보유: ${count}개</span>
+                        <button style="background:${state.selectedSeed === item ? '#ffc107' : '#007acc'}" onclick="selectSeed('${item}')">
+                            ${state.selectedSeed === item ? '선택됨' : '사용'}
+                        </button>
+                    `;
+                    container.appendChild(card);
+                }
+            }
+        }
+
+        function selectSeed(seedName) {
+            state.selectedSeed = seedName;
+            renderInventory();
+            showToast(`${seedName} 선택됨!`);
+        }
+
+        function updateUI() {
+            document.getElementById('coin-display').innerText = `🪙 ${state.coins} G`;
+            document.getElementById('gem-display').innerText = `💎 ${state.gems} Gem`;
+        }
+
+        // Game Loop & Rendering (Roblox Style 2.5D Orthographic / Isometric block feel)
+        function update() {
+            // Player Movement
+            let dx = 0;
+            let dy = 0;
+
+            if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+
+            if (joyActive) {
+                dx = joyVector.x;
+                dy = joyVector.y;
+            }
+
+            if (dx !== 0 || dy !== 0) {
+                const len = Math.hypot(dx, dy);
+                player.x += (dx / len) * player.speed;
+                player.y += (dy / len) * player.speed;
+            }
+
+            // Screen boundaries
+            player.x = Math.max(30, Math.min(canvas.width - 30, player.x));
+            player.y = Math.max(50, Math.min(canvas.height - 30, player.y));
+
+            // Update Plots Growth
+            const now = Date.now();
+            plots.forEach(plot => {
+                if (plot.state === 'growing') {
+                    let elapsed = now - plot.plantedTime;
+                    if (plot.watered) elapsed *= 1.5; // Water speeds up growth by 50%
+
+                    plot.progress = Math.min(1, elapsed / plot.growTime);
+                    if (plot.progress >= 1) {
+                        plot.state = 'ready';
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Garden Background Grid / Tiles
+            plots.forEach(plot => {
+                // Plot base (Roblox Style Block Platform)
+                ctx.fillStyle = '#654321';
+                ctx.beginPath();
+                ctx.roundRect(plot.x - plot.size/2, plot.y - plot.size/2, plot.size, plot.size, 10);
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#4a311c';
+                ctx.stroke();
+
+                // Inner Soil
+                ctx.fillStyle = plot.watered ? '#3d2314' : '#523018';
+                ctx.beginPath();
+                ctx.roundRect(plot.x - plot.size/2 + 6, plot.y - plot.size/2 + 6, plot.size - 12, plot.size - 12, 6);
+                ctx.fill();
+
+                // Plant Rendering based on State
+                if (plot.state === 'growing') {
+                    ctx.fillStyle = '#a3be8c';
+                    let plantHeight = Math.max(10, plot.progress * 35);
+                    ctx.fillRect(plot.x - 6, plot.y + 10 - plantHeight, 12, plantHeight);
+
+                    // Sprout icon or leaf
+                    ctx.font = '16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🌱', plot.x, plot.y + 5);
+
+                    // Water indicator
+                    if (!plot.watered) {
+                        ctx.fillStyle = 'rgba(0, 150, 255, 0.7)';
+                        ctx.font = '12px sans-serif';
+                        ctx.fillText('💧 필요', plot.x, plot.y - 20);
+                    }
+                } else if (plot.state === 'ready') {
+                    const icon = state.seedsData[plot.seedType].icon;
+                    ctx.font = '32px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(icon, plot.x, plot.y);
+
+                    // Ready pulse effect text
+                    ctx.fillStyle = '#ffeb3b';
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.fillText('수확 가능!', plot.x, plot.y - 28);
+                }
+            });
+
+            // Draw Roblox Style Blocky Character
+            drawBlockyCharacter(player.x, player.y, player);
+        }
+
+        function drawBlockyCharacter(x, y, p) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Character Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(0, 22, 16, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Legs (Roblox Blocky Legs)
+            ctx.fillStyle = p.pantsColor;
+            ctx.fillRect(-10, 8, 8, 14);
+            ctx.fillRect(2, 8, 8, 14);
+
+            // Torso (Roblox Shirt)
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.roundRect(-14, -8, 28, 18, 4);
+            ctx.fill();
+            ctx.strokeStyle = '#004080';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Head (Roblox Blocky Head)
+            ctx.fillStyle = p.headColor;
+            ctx.fillRect(-10, -28, 20, 20);
+            ctx.strokeStyle = '#d4ac0d';
+            ctx.strokeRect(-10, -28, 20, 20);
+
+            // Face (Simple Roblox Eyes)
+            ctx.fillStyle = '#000';
+            ctx.fillRect(-5, -20, 3, 3);
+            ctx.fillRect(2, -20, 3, 3);
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        requestAnimationFrame(gameLoop);
+    </script>
 </body>
 </html>
