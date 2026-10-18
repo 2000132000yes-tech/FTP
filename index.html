@@ -44,24 +44,16 @@
         }
 
         #intro-text {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             color: #00ffcc;
             text-shadow: 0 0 8px rgba(0,255,204,0.6);
             white-space: pre-wrap;
-            border-right: 2px solid #00ffcc;
-            display: inline-block;
-            animation: blink-caret 0.75s step-end infinite;
-        }
-
-        @keyframes blink-caret {
-            from, to { border-color: transparent }
-            50% { border-color: #00ffcc; }
         }
 
         #status-panel {
-            margin-top: 10px;
-            font-size: 14px;
+            margin-top: 8px;
+            font-size: 13px;
             color: #aaa;
         }
     </style>
@@ -83,7 +75,7 @@
     const statusPanel = document.getElementById('status-panel');
 
     // 1. 텍스트 애니메이션 설정
-    const fullMessage = "[SYSTEM] AI 위치 동기화 완료.\n수학적 그래프 공격 모듈을 가동합니다.";
+    const fullMessage = "[SYSTEM] AI 위치 동기화 완료. 수학 그래프 공격 모듈 가동!";
     let charIndex = 0;
     let isTypingDone = false;
 
@@ -91,11 +83,13 @@
         if (charIndex < fullMessage.length) {
             introTextEl.textContent += fullMessage.charAt(charIndex);
             charIndex++;
-            setTimeout(typeWriter, 50);
+            setTimeout(typeWriter, 40);
         } else {
             isTypingDone = true;
             statusPanel.textContent = "전투 시작! AI들이 함수 그래프를 발사합니다.";
-            setTimeout(() => { introTextEl.style.display = 'none'; }, 2000);
+            setTimeout(() => { 
+                introTextEl.style.display = 'none'; 
+            }, 1500);
         }
     }
 
@@ -109,13 +103,13 @@
             this.id = id;
             this.x = x;
             this.y = y;
-            this.vx = (Math.random() - 0.5) * 2;
-            this.vy = (Math.random() - 0.5) * 2;
+            this.vx = (Math.random() - 0.5) * 2.5;
+            this.vy = (Math.random() - 0.5) * 2.5;
             this.radius = 12;
             this.color = color;
             this.hp = 100;
             this.isAlive = true;
-            this.attackCooldown = Math.random() * 60 + 40;
+            this.attackCooldown = Math.random() * 50 + 30;
         }
 
         update() {
@@ -152,18 +146,14 @@
             ctx.fillRect(this.x - 15, this.y - 20, (this.hp / 100) * 30, 4);
         }
 
-        // 모든 AI의 위치 정보를 공유받아 수학적 함수 그래프(탄환) 생성
         shootGraph(targets) {
             if (!this.isAlive || targets.length === 0) return;
 
-            // 살아있는 타겟 중 무작위 한 명 선정 (위치 공유 시스템 활용)
             const liveTargets = targets.filter(t => t.id !== this.id && t.isAlive);
             if (liveTargets.length === 0) return;
 
             const target = liveTargets[Math.floor(Math.random() * liveTargets.length)];
 
-            // 수학적 그래프 계산 (일차함수 혹은 이차함수 궤적 부여)
-            // y = ax + b 또는 포물선 궤적을 그리며 서칭/발사
             bullets.push({
                 startX: this.x,
                 startY: this.y,
@@ -173,13 +163,12 @@
                 targetY: target.y,
                 color: this.color,
                 progress: 0,
-                speed: 0.03,
+                speed: 0.04,
                 shooterId: this.id
             });
         }
     }
 
-    // AI 초기화 (5대)
     function initAI() {
         ais = [];
         const margin = 50;
@@ -190,11 +179,10 @@
         }
     }
 
-    // 3. 루프 및 렌더링
     function updateGame() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 배경 그리드 (정사각형 판 느낌 연출)
+        // 배경 그리드
         ctx.strokeStyle = '#2a2a2a';
         ctx.lineWidth = 1;
         for (let i = 0; i < canvas.width; i += 50) {
@@ -202,77 +190,73 @@
             ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
         }
 
-        // AI 업데이트 및 그리기
+        // AI 업데이트
         ais.forEach(ai => {
             ai.update();
             ai.draw();
 
-            // 쿨다운이 끝나면 그래프 탄환 발사
             if (ai.attackCooldown <= 0 && isTypingDone) {
                 ai.shootGraph(ais);
-                ai.attackCooldown = Math.random() * 80 + 60; // 재장전
+                ai.attackCooldown = Math.random() * 60 + 40; 
             }
         });
 
-        // 그래프 탄환(서닝 발사체) 업데이트 및 렌더링
+        // 탄환(그래프 서칭/발사) 업데이트
         for (let i = bullets.length - 1; i >= 0; i--) {
             let b = bullets[i];
             b.progress += b.speed;
 
-            // 수학적 보간(Lerp) 및 사인파를 가미한 곡선(그래프) 궤적 계산
             let interX = b.startX + (b.targetX - b.startX) * b.progress;
             let interY = b.startY + (b.targetY - b.startY) * b.progress;
             
-            // 수학 함수 그래프 효과 (예: sin 곡선 형태의 궤적 진동 추가)
-            let waveOffset = Math.sin(b.progress * Math.PI * 4) * 15;
-            b.currX = interX - (b.targetY - b.startY) * 0.1 * (waveOffset / 15);
+            // 수학 함수 그래프 궤적 (sin 곡선 파동)
+            let waveOffset = Math.sin(b.progress * Math.PI * 4) * 20;
+            b.currX = interX;
             b.currY = interY + waveOffset;
 
-            // 탄환 그리기
             ctx.beginPath();
             ctx.arc(b.currX, b.currY, 5, 0, Math.PI * 2);
             ctx.fillStyle = b.color;
             ctx.shadowColor = b.color;
             ctx.shadowBlur = 10;
             ctx.fill();
-            ctx.shadowBlur = 0; // 초기화
+            ctx.shadowBlur = 0;
             ctx.closePath();
 
-            // 타겟 명중 체크
+            // 충돌 체크
             ais.forEach(ai => {
                 if (ai.isAlive && ai.id !== b.shooterId) {
                     let dist = Math.hypot(ai.x - b.currX, ai.y - b.currY);
                     if (dist < ai.radius + 5) {
-                        ai.hp -= 25; // 피격 데미지
-                        if (ai.hp <= 0) {
-                            ai.isAlive = false;
-                        }
-                        bullets.splice(i, 1); // 탄환 소멸
+                        ai.hp -= 34; // 3발 맞으면 파괴
+                        if (ai.hp <= 0) ai.isAlive = false;
+                        bullets.splice(i, 1);
                     }
                 }
             });
 
-            // 도착 시 제거
             if (b.progress >= 1) {
                 bullets.splice(i, 1);
             }
         }
 
-        // 게임 승리 조건 확인
+        // 승리 조건 체크
         let aliveAis = ais.filter(ai => ai.isAlive);
         if (isTypingDone && aliveAis.length <= 1) {
             statusPanel.textContent = aliveAis.length === 1 ? 
-                `게임 종료! 승리 AI: 색상 ${aliveAis[0].color}` : .
+                `게임 종료! 최후 생존 AI 승리!` : 
                 "게임 종료! 무승부!";
-            return; // 루프 종료
+            // 게임이 끝나도 렌더링은 유지
+            requestAnimationFrame(updateGame);
+            return;
         }
 
         requestAnimationFrame(updateGame);
     }
 
-    // 실행 시작
+    // 초기화 및 실행
     initAI();
-    setTimeout(typeWriter, 500); // 0.5초 뒤 타이핑 애니메이션 시작
+    typeWriter(); // 즉시 타이핑 시작
     requestAnimationFrame(updateGame);
 
 </script>
