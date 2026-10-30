@@ -39,21 +39,21 @@
       transform: translateX(-50%);
       width: calc(100% - 24px);
       max-width: 440px;
-      height: 64px;
+      height: 72px;
       background: rgba(18, 22, 36, 0.92);
       border: 3px solid #3b486b;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 12px;
+      padding: 0 16px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.6);
       z-index: 10;
     }
     .stats-container {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
     .coin-icon {
       width: 24px;
@@ -73,6 +73,11 @@
       flex-direction: column;
       gap: 4px;
     }
+    /* 돈 위에 표시되는 인구수 */
+    .pop-text {
+      color: #60a5fa;
+      font-size: 8px;
+    }
     .money-text {
       color: #fff;
       font-size: 11px;
@@ -82,37 +87,49 @@
       color: #4ade80;
       font-size: 8px;
     }
-    .build-btn {
-      font-family: 'Press Start 2P', monospace, sans-serif;
+
+    /* 네모난 집 버튼 컨테이너 */
+    .build-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .square-build-btn {
+      width: 44px;
+      height: 44px;
       background: #2563eb;
-      border: 2px solid #60a5fa;
-      color: white;
-      padding: 8px 10px;
-      border-radius: 6px;
-      font-size: 8px;
-      font-weight: bold;
+      border: 3px solid #60a5fa;
+      border-radius: 8px;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
       transition: all 0.15s ease;
     }
-    .build-btn.active {
+    .square-build-btn.active {
       background: #16a34a;
       border-color: #86efac;
     }
-    .build-btn:disabled {
+    .square-build-btn:disabled {
       background: #475569;
       border-color: #64748b;
       opacity: 0.6;
       cursor: not-allowed;
     }
     .house-icon {
-      width: 10px;
-      height: 10px;
+      width: 20px;
+      height: 20px;
       background: #4ade80;
       clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
     }
+    /* 버튼 아래 집 구매 가격 */
+    .price-text {
+      color: #ffd700;
+      font-size: 8px;
+      text-align: center;
+    }
+
     #synergy-banner {
       position: absolute;
       top: 12px;
@@ -138,14 +155,17 @@
       <div class="stats-container">
         <div class="coin-icon">C</div>
         <div class="money-details">
+          <div id="pop-display" class="pop-text">인구: 0명</div>
           <div id="money-display" class="money-text">100</div>
           <div id="income-display" class="income-text">+1/초</div>
         </div>
       </div>
-      <button id="build-btn" class="build-btn">
-        <div class="house-icon"></div>
-        <span id="build-btn-text">집 건설 (50원)</span>
-      </button>
+      <div class="build-wrapper">
+        <button id="build-btn" class="square-build-btn">
+          <div class="house-icon"></div>
+        </button>
+        <div id="price-display" class="price-text">50원</div>
+      </div>
     </div>
   </div>
 
@@ -159,11 +179,11 @@
     let houses = [];
     
     let money = 100;
+    let population = 0;
     let houseBuyCount = 0;
     let isBuildMode = false;
     let selectedHouse = null;
 
-    // 확대를 훨씬 더 많이 가능하게 조절 (최대 35배)
     let scale = 1;
     let minScale = 1;
     let maxScale = 35;
@@ -173,16 +193,16 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d', { alpha: false });
     
-    // 렉 감소를 위한 오프스크린 맵 캔버스 캐싱
     let mapCanvas = document.createElement('canvas');
     let mapCtx = mapCanvas.getContext('2d');
     mapCanvas.width = MAP_SIZE;
     mapCanvas.height = MAP_SIZE;
 
+    const popDisplay = document.getElementById('pop-display');
     const moneyDisplay = document.getElementById('money-display');
     const incomeDisplay = document.getElementById('income-display');
     const buildBtn = document.getElementById('build-btn');
-    const buildBtnText = document.getElementById('build-btn-text');
+    const priceDisplay = document.getElementById('price-display');
     const synergyBanner = document.getElementById('synergy-banner');
 
     class FastNoise {
@@ -210,13 +230,12 @@
 
     const noiseGen = new FastNoise();
 
-    // 구매 가격 1.5배 상승 적용
     function getHousePrice() {
       if (houseBuyCount < 4) return 50;
       return Math.floor(50 * Math.pow(1.5, houseBuyCount - 3));
     }
 
-    function formatMoney(num) {
+    function formatNumber(num) {
       if (num >= 10000) return (num / 1000).toFixed(0) + 'K';
       if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
       return Math.floor(num).toString();
@@ -293,7 +312,6 @@
       }
     }
 
-    // 맵 지형 픽셀 데이터 오프스크린 렌더링 (렉 감소 핵심)
     function renderMapCache() {
       let imgData = mapCtx.createImageData(MAP_SIZE, MAP_SIZE);
       let data = imgData.data;
@@ -304,7 +322,7 @@
           let tile = map[r][c];
           let nation = nations[r][c];
 
-          let rgb = [30, 58, 138]; // WATER_DEEP
+          let rgb = [30, 58, 138];
           if (nation === NATION_PLAYER) rgb = [236, 72, 153];
           else if (nation === NATION_SMALL) rgb = [163, 230, 53];
           else if (nation === NATION_LARGE) rgb = [168, 85, 247];
@@ -321,6 +339,39 @@
       mapCtx.putImageData(imgData, 0, 0);
     }
 
+    // 인구수 기반 땅 자동 확장 (주변 인구 미점령지 대상)
+    function expandTerritory() {
+      if (population <= 0) return;
+
+      // 인구수 * 2% 확률로 땅 확장 시도
+      let chance = (population * 2) / 100;
+      if (Math.random() > chance) return;
+
+      let candidates = [];
+      for (let r = 0; r < MAP_SIZE; r++) {
+        for (let c = 0; c < MAP_SIZE; c++) {
+          if (nations[r][c] === NATION_PLAYER) {
+            for (let dr = -1; dr <= 1; dr++) {
+              for (let dc = -1; dc <= 1; dc++) {
+                let nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < MAP_SIZE && nc >= 0 && nc < MAP_SIZE) {
+                  if (nations[nr][nc] === NATION_NONE && (map[nr][nc] === LAND || map[nr][nc] === STONE)) {
+                    candidates.push({ r: nr, c: nc });
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (candidates.length > 0) {
+        let target = candidates[Math.floor(Math.random() * candidates.length)];
+        nations[target.r][target.c] = NATION_PLAYER;
+        renderMapCache();
+      }
+    }
+
     function calculateIncome() {
       let total = 1;
       let maxSynergyMultiplier = 1;
@@ -329,7 +380,8 @@
         let nearbyCount = 0;
         houses.forEach(other => {
           let dist = Math.hypot(h.r - other.r, h.c - other.c);
-          if (dist <= 3) nearbyCount++;
+          // 집 효과 범위 5칸으로 수정
+          if (dist <= 5) nearbyCount++;
         });
 
         let baseHouseIncome = 5;
@@ -358,15 +410,17 @@
     function gameLoop() {
       let income = calculateIncome();
       money += income;
+      expandTerritory();
       updateUI();
     }
 
     function updateUI() {
-      moneyDisplay.innerText = formatMoney(money);
-      incomeDisplay.innerText = `+${formatMoney(calculateIncome())}/초`;
+      popDisplay.innerText = `인구: ${formatNumber(population)}명`;
+      moneyDisplay.innerText = formatNumber(money);
+      incomeDisplay.innerText = `+${formatNumber(calculateIncome())}/초`;
 
       let price = getHousePrice();
-      buildBtnText.innerText = `집 건설 (${formatMoney(price)}원)`;
+      priceDisplay.innerText = `${formatNumber(price)}원`;
       buildBtn.disabled = money < price;
     }
 
@@ -400,7 +454,6 @@
       }
     }
 
-    // 최적화된 렌더링 루프
     function draw() {
       ctx.fillStyle = '#050b14';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -408,7 +461,6 @@
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(mapCanvas, 0, 0, MAP_SIZE, MAP_SIZE, offsetX, offsetY, MAP_SIZE * scale, MAP_SIZE * scale);
 
-      // 격자선 (고배율 확대시에만 정교하게 표시)
       if (scale > 8) {
         ctx.strokeStyle = 'rgba(0,0,0,0.12)';
         ctx.lineWidth = 0.5;
@@ -431,7 +483,6 @@
         ctx.stroke();
       }
 
-      // 집 그리기
       houses.forEach(h => {
         let x = offsetX + h.c * scale;
         let y = offsetY + h.r * scale;
@@ -441,17 +492,17 @@
         }
       });
 
-      // 선택된 집 반경 표시 (3픽셀)
+      // 선택된 집 반경 표시 (5칸으로 변경)
       if (selectedHouse) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-        let minR = Math.max(0, selectedHouse.r - 3);
-        let maxR = Math.min(MAP_SIZE - 1, selectedHouse.r + 3);
-        let minC = Math.max(0, selectedHouse.c - 3);
-        let maxC = Math.min(MAP_SIZE - 1, selectedHouse.c + 3);
+        let minR = Math.max(0, selectedHouse.r - 5);
+        let maxR = Math.min(MAP_SIZE - 1, selectedHouse.r + 5);
+        let minC = Math.max(0, selectedHouse.c - 5);
+        let maxC = Math.min(MAP_SIZE - 1, selectedHouse.c + 5);
 
         for (let r = minR; r <= maxR; r++) {
           for (let c = minC; c <= maxC; c++) {
-            if (Math.hypot(r - selectedHouse.r, c - selectedHouse.c) <= 3) {
+            if (Math.hypot(r - selectedHouse.r, c - selectedHouse.c) <= 5) {
               let x = offsetX + c * scale;
               let y = offsetY + r * scale;
               ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(scale), Math.ceil(scale));
@@ -560,6 +611,8 @@
           if (!hasHouse) {
             houses.push({ r: row, c: col });
             money -= price;
+            // 집 건설 시 인구수 1~3명 추가
+            population += Math.floor(Math.random() * 3) + 1;
             houseBuyCount++;
             isBuildMode = false;
             buildBtn.classList.remove('active');
