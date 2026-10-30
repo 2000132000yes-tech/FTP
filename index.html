@@ -38,7 +38,7 @@
       left: 50%;
       transform: translateX(-50%);
       width: calc(100% - 24px);
-      max-width: 440px;
+      max-width: 480px;
       height: 72px;
       background: rgba(18, 22, 36, 0.92);
       border: 3px solid #3b486b;
@@ -53,7 +53,7 @@
     .stats-container {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     .coin-icon {
       width: 24px;
@@ -71,9 +71,8 @@
     .money-details {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
     }
-    /* 돈 위에 표시되는 인구수 */
     .pop-text {
       color: #60a5fa;
       font-size: 8px;
@@ -88,7 +87,10 @@
       font-size: 8px;
     }
 
-    /* 네모난 집 버튼 컨테이너 */
+    .buttons-group {
+      display: flex;
+      gap: 12px;
+    }
     .build-wrapper {
       display: flex;
       flex-direction: column;
@@ -96,8 +98,8 @@
       gap: 4px;
     }
     .square-build-btn {
-      width: 44px;
-      height: 44px;
+      width: 42px;
+      height: 42px;
       background: #2563eb;
       border: 3px solid #60a5fa;
       border-radius: 8px;
@@ -111,6 +113,14 @@
       background: #16a34a;
       border-color: #86efac;
     }
+    .square-build-btn.port-btn {
+      background: #1e3a8a;
+      border-color: #3b82f6;
+    }
+    .square-build-btn.port-btn.active {
+      background: #1d4ed8;
+      border-color: #93c5fd;
+    }
     .square-build-btn:disabled {
       background: #475569;
       border-color: #64748b;
@@ -118,16 +128,46 @@
       cursor: not-allowed;
     }
     .house-icon {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       background: #4ade80;
       clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
     }
-    /* 버튼 아래 집 구매 가격 */
     .price-text {
       color: #ffd700;
-      font-size: 8px;
+      font-size: 7px;
       text-align: center;
+    }
+
+    /* 집 클릭 시 뜨는 팝업 창 */
+    #house-popup {
+      position: absolute;
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid #38bdf8;
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      z-index: 20;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .popup-house-icon {
+      width: 24px;
+      height: 24px;
+      background: #4ade80;
+      clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
+    }
+    .popup-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      color: #fff;
+      font-size: 7px;
+    }
+    .popup-info span {
+      white-space: nowrap;
     }
 
     #synergy-banner {
@@ -150,7 +190,18 @@
 <body>
   <div id="game-container">
     <canvas id="canvas"></canvas>
-    <div id="synergy-banner">시너지 발동 중!</div>
+    <div id="synergy-banner">시간 경과 보너스 적용 중!</div>
+    
+    <!-- 집 상세 정보 팝업 창 -->
+    <div id="house-popup">
+      <div class="popup-house-icon"></div>
+      <div class="popup-info">
+        <span id="pop-info-text">인구: 0명</span>
+        <span id="income-info-text">수익: +0/초</span>
+        <span id="synergy-info-text">시너지: 0개</span>
+      </div>
+    </div>
+
     <div id="bottom-ui">
       <div class="stats-container">
         <div class="coin-icon">C</div>
@@ -160,11 +211,24 @@
           <div id="income-display" class="income-text">+1/초</div>
         </div>
       </div>
-      <div class="build-wrapper">
-        <button id="build-btn" class="square-build-btn">
-          <div class="house-icon"></div>
-        </button>
-        <div id="price-display" class="price-text">50원</div>
+      <div class="buttons-group">
+        <div class="build-wrapper">
+          <button id="build-btn" class="square-build-btn">
+            <div class="house-icon"></div>
+          </button>
+          <div id="price-display" class="price-text">50원</div>
+        </div>
+        <div class="build-wrapper">
+          <button id="port-btn" class="square-build-btn port-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+              <path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.3.62 4.49 1.62 6"/>
+              <path d="M12 2v12"/>
+              <path d="M12 4l7 6H12z"/>
+            </svg>
+          </button>
+          <div id="port-price-display" class="price-text">500원</div>
+        </div>
       </div>
     </div>
   </div>
@@ -177,12 +241,18 @@
     let map = [];
     let nations = [];
     let houses = [];
+    let ports = [];
+    let ships = [];
     
     let money = 100;
     let population = 0;
     let houseBuyCount = 0;
-    let isBuildMode = false;
+    let portBuyCount = 0;
+    let isBuildMode = null; // 'house' or 'port' or null
     let selectedHouse = null;
+
+    let globalIncomeMultiplier = 1.0;
+    let incomeTimer = 0;
 
     let scale = 1;
     let minScale = 1;
@@ -203,7 +273,13 @@
     const incomeDisplay = document.getElementById('income-display');
     const buildBtn = document.getElementById('build-btn');
     const priceDisplay = document.getElementById('price-display');
+    const portBtn = document.getElementById('port-btn');
+    const portPriceDisplay = document.getElementById('port-price-display');
     const synergyBanner = document.getElementById('synergy-banner');
+    const housePopup = document.getElementById('house-popup');
+    const popInfoText = document.getElementById('pop-info-text');
+    const incomeInfoText = document.getElementById('income-info-text');
+    const synergyInfoText = document.getElementById('synergy-info-text');
 
     class FastNoise {
       constructor() {
@@ -233,6 +309,11 @@
     function getHousePrice() {
       if (houseBuyCount < 4) return 50;
       return Math.floor(50 * Math.pow(1.5, houseBuyCount - 3));
+    }
+
+    function getPortPrice() {
+      if (portBuyCount < 5) return 500;
+      return Math.floor(500 * Math.pow(1.5, portBuyCount - 4));
     }
 
     function formatNumber(num) {
@@ -339,11 +420,9 @@
       mapCtx.putImageData(imgData, 0, 0);
     }
 
-    // 인구수 기반 땅 자동 확장 (주변 인구 미점령지 대상)
+    // 직교 방향 영토 확장
     function expandTerritory() {
       if (population <= 0) return;
-
-      // 인구수 * 2% 확률로 땅 확장 시도
       let chance = (population * 2) / 100;
       if (Math.random() > chance) return;
 
@@ -351,13 +430,12 @@
       for (let r = 0; r < MAP_SIZE; r++) {
         for (let c = 0; c < MAP_SIZE; c++) {
           if (nations[r][c] === NATION_PLAYER) {
-            for (let dr = -1; dr <= 1; dr++) {
-              for (let dc = -1; dc <= 1; dc++) {
-                let nr = r + dr, nc = c + dc;
-                if (nr >= 0 && nr < MAP_SIZE && nc >= 0 && nc < MAP_SIZE) {
-                  if (nations[nr][nc] === NATION_NONE && (map[nr][nc] === LAND || map[nr][nc] === STONE)) {
-                    candidates.push({ r: nr, c: nc });
-                  }
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]]; // 대각선 제외 직교 방향만
+            for (let [dr, dc] of dirs) {
+              let nr = r + dr, nc = c + dc;
+              if (nr >= 0 && nr < MAP_SIZE && nc >= 0 && nc < MAP_SIZE) {
+                if (nations[nr][nc] === NATION_NONE && (map[nr][nc] === LAND || map[nr][nc] === STONE)) {
+                  candidates.push({ r: nr, c: nc });
                 }
               }
             }
@@ -372,16 +450,16 @@
       }
     }
 
+    // 개별 집 시너지 및 총 수익 계산
     function calculateIncome() {
       let total = 1;
-      let maxSynergyMultiplier = 1;
 
       houses.forEach(h => {
         let nearbyCount = 0;
         houses.forEach(other => {
-          let dist = Math.hypot(h.r - other.r, h.c - other.c);
-          // 집 효과 범위 5칸으로 수정
-          if (dist <= 5) nearbyCount++;
+          if (Math.hypot(h.r - other.r, h.c - other.c) <= 5) {
+            nearbyCount++;
+          }
         });
 
         let baseHouseIncome = 5;
@@ -392,26 +470,77 @@
         else if (nearbyCount >= 10) mult = 3;
         else if (nearbyCount >= 5) mult = 2;
 
-        if (mult > maxSynergyMultiplier) maxSynergyMultiplier = mult;
+        let houseInc = (baseHouseIncome + Math.max(0, bonusIncome)) * mult;
+        h.calculatedIncome = houseInc;
+        h.synergyCount = Math.max(0, nearbyCount - 1);
 
-        total += (baseHouseIncome + bonusIncome) * mult;
+        total += houseInc;
       });
 
-      if (maxSynergyMultiplier > 1) {
+      return Math.floor(total * globalIncomeMultiplier);
+    }
+
+    // 항구 및 배 업데이트 로직
+    function updateShips() {
+      ships.forEach(s => {
+        if (s.state === 'wait_at_port') {
+          s.timer--;
+          if (s.timer <= 0) {
+            // 무작위 얕은 바다(WATER_SHALLOW) 타겟 찾기
+            let shallowTiles = [];
+            for (let r = 0; r < MAP_SIZE; r++) {
+              for (let c = 0; c < MAP_SIZE; c++) {
+                if (map[r][c] === WATER_SHALLOW) {
+                  shallowTiles.push({ r, c });
+                }
+              }
+            }
+            if (shallowTiles.length > 0) {
+              let target = shallowTiles[Math.floor(Math.random() * shallowTiles.length)];
+              s.targetR = target.r;
+              s.targetC = target.c;
+              s.state = 'to_dest';
+            }
+          }
+        } else if (s.state === 'to_dest') {
+          // 이동 처리 (단순화: 목적지로 즉시 이동하거나 스텝 이동)
+          s.r = s.targetR;
+          s.c = s.targetC;
+          s.state = 'wait_at_dest';
+          s.timer = 2; // 2초 대기
+        } else if (s.state === 'wait_at_dest') {
+          s.timer--;
+          if (s.timer <= 0) {
+            // 수익 획득: 1000 * 인구수 / 4
+            let reward = Math.floor(1000 * population / 4);
+            money += reward;
+            s.state = 'to_port';
+          }
+        } else if (s.state === 'to_port') {
+          s.r = s.portR;
+          s.c = s.portC;
+          s.state = 'wait_at_port';
+          s.timer = 2; // 항구에서 2초 대기 후 반복
+        }
+      });
+    }
+
+    function gameLoop() {
+      incomeTimer++;
+      if (incomeTimer >= 5) {
+        incomeTimer = 0;
+        globalIncomeMultiplier *= 1.05; // 5초마다 5% 증가
         synergyBanner.style.display = 'block';
-        synergyBanner.innerText = `시너지 발동! (${maxSynergyMultiplier}배 보너스)`;
       } else {
         synergyBanner.style.display = 'none';
       }
 
-      return total;
-    }
-
-    function gameLoop() {
       let income = calculateIncome();
       money += income;
       expandTerritory();
+      updateShips();
       updateUI();
+      updateHousePopup();
     }
 
     function updateUI() {
@@ -419,9 +548,29 @@
       moneyDisplay.innerText = formatNumber(money);
       incomeDisplay.innerText = `+${formatNumber(calculateIncome())}/초`;
 
-      let price = getHousePrice();
-      priceDisplay.innerText = `${formatNumber(price)}원`;
-      buildBtn.disabled = money < price;
+      let housePrice = getHousePrice();
+      priceDisplay.innerText = `${formatNumber(housePrice)}원`;
+      buildBtn.disabled = money < housePrice;
+
+      let portPrice = getPortPrice();
+      portPriceDisplay.innerText = `${formatNumber(portPrice)}원`;
+      portBtn.disabled = money < portPrice || population < 10;
+    }
+
+    function updateHousePopup() {
+      if (selectedHouse) {
+        popInfoText.innerText = `인구: ${selectedHouse.pop}명`;
+        incomeInfoText.innerText = `수익: +${selectedHouse.calculatedIncome || 5}/초`;
+        synergyInfoText.innerText = `시너지: ${selectedHouse.synergyCount || 0}개`;
+
+        let screenX = offsetX + selectedHouse.c * scale;
+        let screenY = offsetY + selectedHouse.r * scale - 50;
+        housePopup.style.display = 'flex';
+        housePopup.style.left = `${screenX}px`;
+        housePopup.style.top = `${screenY}px`;
+      } else {
+        housePopup.style.display = 'none';
+      }
     }
 
     function resizeCanvas() {
@@ -454,12 +603,52 @@
       }
     }
 
+    function isValidHouseLocation(r, c) {
+      if (nations[r][c] !== NATION_PLAYER || map[r][c] !== LAND) return false;
+      if (houses.some(h => h.r === r && h.c === c)) return false;
+      return true;
+    }
+
+    function isValidPortLocation(r, c) {
+      if (nations[r][c] !== NATION_PLAYER || map[r][c] !== LAND) return false;
+      if (ports.some(p => p.r === r && p.c === c)) return false;
+      
+      // 얕은 바다(WATER_SHALLOW) 2블록 주위 확인
+      let nearShallow = false;
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          let nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < MAP_SIZE && nc >= 0 && nc < MAP_SIZE) {
+            if (map[nr][nc] === WATER_SHALLOW && Math.abs(dr) + Math.abs(dc) <= 2) {
+              nearShallow = true;
+            }
+          }
+        }
+      }
+      return nearShallow;
+    }
+
     function draw() {
       ctx.fillStyle = '#050b14';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(mapCanvas, 0, 0, MAP_SIZE, MAP_SIZE, offsetX, offsetY, MAP_SIZE * scale, MAP_SIZE * scale);
+
+      // 건설 모드일 때 불가능한 위치를 붉은색 반투명으로 표시
+      if (isBuildMode) {
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+        for (let r = 0; r < MAP_SIZE; r++) {
+          for (let c = 0; c < MAP_SIZE; c++) {
+            let valid = (isBuildMode === 'house') ? isValidHouseLocation(r, c) : isValidPortLocation(r, c);
+            if (!valid && nations[r][c] === NATION_PLAYER) {
+              let x = offsetX + c * scale;
+              let y = offsetY + r * scale;
+              ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(scale), Math.ceil(scale));
+            }
+          }
+        }
+      }
 
       if (scale > 8) {
         ctx.strokeStyle = 'rgba(0,0,0,0.12)';
@@ -483,6 +672,7 @@
         ctx.stroke();
       }
 
+      // 집 그리기
       houses.forEach(h => {
         let x = offsetX + h.c * scale;
         let y = offsetY + h.r * scale;
@@ -492,7 +682,27 @@
         }
       });
 
-      // 선택된 집 반경 표시 (5칸으로 변경)
+      // 항구 그리기 (짙은 파란색)
+      ports.forEach(p => {
+        let x = offsetX + p.c * scale;
+        let y = offsetY + p.r * scale;
+        if (x + scale > 0 && x < canvas.width && y + scale > 0 && y < canvas.height) {
+          ctx.fillStyle = '#1d4ed8';
+          ctx.fillRect(Math.floor(x + scale * 0.1), Math.floor(y + scale * 0.1), scale * 0.8, scale * 0.8);
+        }
+      });
+
+      // 배 그리기
+      ships.forEach(s => {
+        let x = offsetX + s.c * scale;
+        let y = offsetY + s.r * scale;
+        if (x + scale > 0 && x < canvas.width && y + scale > 0 && y < canvas.height) {
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(Math.floor(x + scale * 0.2), Math.floor(y + scale * 0.2), scale * 0.6, scale * 0.6);
+        }
+      });
+
+      // 선택된 집 반경 표시 (5칸)
       if (selectedHouse) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
         let minR = Math.max(0, selectedHouse.r - 5);
@@ -545,6 +755,7 @@
 
       clampOffset();
       requestAnimationFrame(draw);
+      updateHousePopup();
     }, { passive: false });
 
     let initialPinchDist = null;
@@ -568,6 +779,7 @@
         offsetY = e.touches[0].clientY - startY;
         clampOffset();
         requestAnimationFrame(draw);
+        updateHousePopup();
       } else if (e.touches.length === 2 && initialPinchDist) {
         let currentDist = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
@@ -586,6 +798,7 @@
 
         clampOffset();
         requestAnimationFrame(draw);
+        updateHousePopup();
       }
     });
 
@@ -604,21 +817,31 @@
 
       if (row < 0 || row >= MAP_SIZE || col < 0 || col >= MAP_SIZE) return;
 
-      if (isBuildMode) {
+      if (isBuildMode === 'house') {
         let price = getHousePrice();
-        if (nations[row][col] === NATION_PLAYER && money >= price) {
-          let hasHouse = houses.some(h => h.r === row && h.c === col);
-          if (!hasHouse) {
-            houses.push({ r: row, c: col });
-            money -= price;
-            // 집 건설 시 인구수 1~3명 추가
-            population += Math.floor(Math.random() * 3) + 1;
-            houseBuyCount++;
-            isBuildMode = false;
-            buildBtn.classList.remove('active');
-            updateUI();
-            draw();
-          }
+        if (isValidHouseLocation(row, col) && money >= price) {
+          let popAdded = Math.floor(Math.random() * 3) + 1;
+          houses.push({ r: row, c: col, pop: popAdded });
+          money -= price;
+          population += popAdded;
+          houseBuyCount++;
+          isBuildMode = null;
+          buildBtn.classList.remove('active');
+          updateUI();
+          draw();
+        }
+      } else if (isBuildMode === 'port') {
+        let price = getPortPrice();
+        if (isValidPortLocation(row, col) && money >= price && population >= 10) {
+          ports.push({ r: row, c: col });
+          ships.push({ portR: row, portC: col, r: row, c: col, state: 'wait_at_port', timer: 2, targetR: null, targetC: null });
+          money -= price;
+          population -= 10; // 인구 10 소비
+          portBuyCount++;
+          isBuildMode = null;
+          portBtn.classList.remove('active');
+          updateUI();
+          draw();
         }
       } else {
         let house = houses.find(h => h.r === row && h.c === col);
@@ -628,16 +851,32 @@
           selectedHouse = null;
         }
         draw();
+        updateHousePopup();
       }
     });
 
     buildBtn.addEventListener('click', () => {
-      isBuildMode = !isBuildMode;
-      if (isBuildMode) {
-        buildBtn.classList.add('active');
+      if (isBuildMode === 'house') {
+        isBuildMode = null;
+        buildBtn.classList.remove('active');
       } else {
+        isBuildMode = 'house';
+        buildBtn.classList.add('active');
+        portBtn.classList.remove('active');
+      }
+      draw();
+    });
+
+    portBtn.addEventListener('click', () => {
+      if (isBuildMode === 'port') {
+        isBuildMode = null;
+        portBtn.classList.remove('active');
+      } else {
+        isBuildMode = 'port';
+        portBtn.classList.add('active');
         buildBtn.classList.remove('active');
       }
+      draw();
     });
 
     window.addEventListener('resize', resizeCanvas);
