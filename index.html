@@ -207,7 +207,7 @@
 <body>
   <div id="game-container">
     <canvas id="canvas"></canvas>
-    <div id="synergy-banner">보너스 적용 중!</div>
+    <div id="synergy-banner">수익 5% 증가 보너스 적용!</div>
     
     <!-- 건물 상세 정보 팝업 창 -->
     <div id="building-popup">
@@ -269,10 +269,12 @@
     let houseBuyCount = 0;
     let portBuyCount = 0;
     let isBuildMode = null;
-    let selectedBuilding = null; // { type: 'house'|'port', data: ... }
+    let selectedBuilding = null;
 
     let globalIncomeMultiplier = 1.0;
     let timer5s = 0;
+    let nationExpandTimer = 0;
+    let nextNationExpandTime = 0.5;
 
     let scale = 1;
     let minScale = 1;
@@ -349,13 +351,12 @@
       map = Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(WATER_DEEP));
       nations = Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(NATION_NONE));
 
-      // 얕은 바다 범위 확대 (임계값 조절)
       for (let r = 0; r < MAP_SIZE; r++) {
         for (let c = 0; c < MAP_SIZE; c++) {
           let nx = c / 18, ny = r / 18;
           let val = noiseGen.noise(nx, ny) + noiseGen.noise(nx * 2, ny * 2) * 0.5;
           if (val > 0.12) map[r][c] = LAND;
-          else if (val > -0.05) map[r][c] = WATER_SHALLOW; // 넓은 얕은 바다
+          else if (val > -0.05) map[r][c] = WATER_SHALLOW;
         }
       }
 
@@ -397,8 +398,9 @@
         }
       }
 
-      placeNations(NATION_SMALL, 4, 2);
-      placeNations(NATION_LARGE, 2, 5);
+      // 다른 나라들 개수 증가
+      placeNations(NATION_SMALL, 12, 3);
+      placeNations(NATION_LARGE, 8, 5);
 
       renderMapCache();
     }
@@ -444,9 +446,10 @@
       mapCtx.putImageData(imgData, 0, 0);
     }
 
+    // 인구수 비례 영토 확장
     function expandTerritory() {
       if (population <= 0) return;
-      let chance = (population * 2) / 100;
+      let chance = (population * 4) / 100;
       if (Math.random() > chance) return;
 
       let candidates = [];
@@ -470,6 +473,43 @@
         let target = candidates[Math.floor(Math.random() * candidates.length)];
         nations[target.r][target.c] = NATION_PLAYER;
         renderMapCache();
+      }
+    }
+
+    // 다른 나라들 자동 확장 (0.1 ~ 2초 쿨타임)
+    function updateOtherNations(dt) {
+      nationExpandTimer += dt;
+      if (nationExpandTimer >= nextNationExpandTime) {
+        nationExpandTimer = 0;
+        nextNationExpandTime = 0.1 + Math.random() * 1.9;
+
+        let nationTiles = [];
+        for (let r = 0; r < MAP_SIZE; r++) {
+          for (let c = 0; c < MAP_SIZE; c++) {
+            if (nations[r][c] === NATION_SMALL || nations[r][c] === NATION_LARGE) {
+              nationTiles.push({ r, c, type: nations[r][c] });
+            }
+          }
+        }
+
+        if (nationTiles.length > 0) {
+          let nt = nationTiles[Math.floor(Math.random() * nationTiles.length)];
+          const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          let candidates = [];
+          for (let [dr, dc] of dirs) {
+            let nr = nt.r + dr, nc = nt.c + dc;
+            if (nr >= 0 && nr < MAP_SIZE && nc >= 0 && nc < MAP_SIZE) {
+              if (nations[nr][nc] === NATION_NONE && (map[nr][nc] === LAND || map[nr][nc] === STONE)) {
+                candidates.push({ r: nr, c: nc });
+              }
+            }
+          }
+          if (candidates.length > 0) {
+            let target = candidates[Math.floor(Math.random() * candidates.length)];
+            nations[target.r][target.c] = nt.type;
+            renderMapCache();
+          }
+        }
       }
     }
 
@@ -502,38 +542,107 @@
       return Math.floor(total * globalIncomeMultiplier);
     }
 
-    // 부드러운 배 애니메이션 및 동작 처리
+    // 물길 경로 탐색 (BFS)
+    function findWaterPath(startR, startC, endR, endC) {
+      let queue = [[startR, startC]];
+      let visited = Array.from({length: MAP_SIZE}, () => Array(MAP_SIZE).fill(false));
+      let parent = Array.from({length: MAP_SIZE}, () => Array(MAP_SIZE).fill(null));
+      visited[startR][startC] = true;
+      
+      while(queue.length > 0) {
+        let [r, c] = queue.shift();
+        if(r === endR && c === endC) break;
+        
+        const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+        for(let [dr, dc] of dirs) {
+          let nr = r + dr, nc = c + dc;
+          if(nr >= 0 && nr < MAP_SIZE && nc >= 0 && nc < MAP_SIZE) {
+            if(!visited[nr][nc] && (map[nr][nc] === WATER_SHALLOW || map[nr][nc] === WATER_DEEP || (nr === endR && nc === endC) || (nr === startR && nc === startC))) {
+              visited[nr][nc] = true;
+              parent[nr][nc] = [r, c];
+              queue.push([nr, nc]);
+            }
+          }
+        }
+      }
+      
+      let path = [];
+      let curr = [endR, endC];
+      while(curr && (curr[0] !== startR || curr[1] !== startC)) {
+        path.unshift(curr);
+        let p = parent[curr[0]][curr[1]];
+        if(!p) break;
+        curr = p;
+      }
+      return path;
+    }
+
+    // 배 이동 및 항해 애니메이션 처리
     function updateShips(dt) {
       ships.forEach(s => {
         if (s.state === 'wait_at_port') {
           s.timer -= dt;
           if (s.timer <= 0) {
+            // 사방이 땅으로 둘러싸인 지역 제외 및 유효한 얕은 바다 찾기
             let shallowTiles = [];
             for (let r = 0; r < MAP_SIZE; r++) {
               for (let c = 0; c < MAP_SIZE; c++) {
-                if (map[r][c] === WATER_SHALLOW && Math.hypot(r - s.portR, c - s.portC) > 10) {
-                  shallowTiles.push({ r, c });
+                if (map[r][c] === WATER_SHALLOW && Math.hypot(r - s.portR, c - s.portC) > 8) {
+                  // 사방이 땅으로 둘러싸였는지 체크 (적어도 하나의 인접 물이 있어야 함)
+                  let waterNeighbors = 0;
+                  const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                  for(let [dr, dc] of dirs) {
+                    let nr = r + dr, nc = c + dc;
+                    if(nr >= 0 && nr < MAP_SIZE && nc >= 0 && nc < MAP_SIZE) {
+                      if(map[nr][nc] === WATER_SHALLOW || map[nr][nc] === WATER_DEEP) waterNeighbors++;
+                    }
+                  }
+                  if(waterNeighbors > 0) {
+                    shallowTiles.push({ r, c });
+                  }
                 }
               }
             }
             if (shallowTiles.length > 0) {
               let target = shallowTiles[Math.floor(Math.random() * shallowTiles.length)];
-              s.targetR = target.r;
-              s.targetC = target.c;
-              s.state = 'sailing_to_dest';
+              s.path = findWaterPath(Math.round(s.r), Math.round(s.c), target.r, target.c);
+              if(s.path.length > 0) {
+                s.pathIndex = 0;
+                s.state = 'sailing_to_dest';
+              }
             }
           }
-        } else if (s.state === 'sailing_to_dest') {
-          let dx = s.targetC - s.c;
-          let dy = s.targetR - s.r;
+        } else if (s.state === 'sailing_to_dest' || s.state === 'sailing_to_port') {
+          if(!s.path || s.pathIndex >= s.path.length) {
+            if(s.state === 'sailing_to_dest') {
+              s.state = 'wait_at_dest';
+              s.timer = 2;
+            } else {
+              s.state = 'wait_at_port';
+              s.timer = 2;
+            }
+            return;
+          }
+          
+          let targetNode = s.path[s.pathIndex];
+          let dx = targetNode[1] - s.c;
+          let dy = targetNode[0] - s.r;
           let dist = Math.hypot(dx, dy);
-          let speed = 4 * dt; // 이동 속도
+          let speed = 5 * dt;
 
           if (dist <= speed) {
-            s.r = s.targetR;
-            s.c = s.targetC;
-            s.state = 'wait_at_dest';
-            s.timer = 2;
+            s.r = targetNode[0];
+            s.c = targetNode[1];
+            s.pathIndex++;
+            if(s.pathIndex >= s.path.length) {
+              if(s.state === 'sailing_to_dest') {
+                s.state = 'wait_at_dest';
+                s.timer = 2;
+              } else {
+                s.state = 'wait_at_port';
+                s.timer = 2;
+              }
+            }
           } else {
             s.c += (dx / dist) * speed;
             s.r += (dy / dist) * speed;
@@ -543,22 +652,10 @@
           if (s.timer <= 0) {
             let reward = Math.floor(1000 * population / 4);
             money += reward;
+            // 항구로 돌아가는 경로 탐색
+            s.path = findWaterPath(Math.round(s.r), Math.round(s.c), s.portR, s.portC);
+            s.pathIndex = 0;
             s.state = 'sailing_to_port';
-          }
-        } else if (s.state === 'sailing_to_port') {
-          let dx = s.portC - s.c;
-          let dy = s.portR - s.r;
-          let dist = Math.hypot(dx, dy);
-          let speed = 4 * dt;
-
-          if (dist <= speed) {
-            s.r = s.portR;
-            s.c = s.portC;
-            s.state = 'wait_at_port';
-            s.timer = 2;
-          } else {
-            s.c += (dx / dist) * speed;
-            s.r += (dy / dist) * speed;
           }
         }
       });
@@ -574,7 +671,6 @@
       if (timer5s >= 5) {
         timer5s = 0;
         globalIncomeMultiplier *= 1.05; // 5초마다 수익 5% 증가
-        population = Math.round(population * 1.5); // 5초마다 인구수 1.5배 (반올림)
         synergyBanner.style.display = 'block';
       } else if (timer5s > 1) {
         synergyBanner.style.display = 'none';
@@ -583,7 +679,8 @@
       let income = calculateIncome();
       money += income * dt;
 
-      if (Math.random() < 0.2 * dt) expandTerritory();
+      expandTerritory();
+      updateOtherNations(dt);
       updateShips(dt);
       updateUI();
       updatePopup();
@@ -621,7 +718,7 @@
         } else if (selectedBuilding.type === 'port') {
           popupIcon.className = 'popup-icon port';
           popInfoText.innerText = `무역 항구`;
-          incomeInfoText.innerText = `배 1척 운항 중`;
+          incomeInfoText.innerText = `배 운항 중`;
           synergyInfoText.innerText = `무역 수익 창출`;
           destroyBtn.innerText = `철거 (${formatNumber(Math.floor(getPortPrice() * 0.5))}원 환급)`;
         }
@@ -663,7 +760,6 @@
       }
     }
 
-    // 다른 건물 위치 중복 검사
     function isOccupied(r, c) {
       return houses.some(h => h.r === r && h.c === c) || ports.some(p => p.r === r && p.c === c);
     }
@@ -678,7 +774,6 @@
       if (isOccupied(r, c)) return false;
       if (map[r][c] !== WATER_SHALLOW) return false;
 
-      // 점령된 내 땅 반경 5블록 이내의 얕은 바다인 경우 설치 가능
       let nearMyLand = false;
       for (let dr = -5; dr <= 5; dr++) {
         for (let dc = -5; dc <= 5; dc++) {
@@ -700,7 +795,6 @@
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(mapCanvas, 0, 0, MAP_SIZE, MAP_SIZE, offsetX, offsetY, MAP_SIZE * scale, MAP_SIZE * scale);
 
-      // 건설 불가능한 영역 붉은색 표시
       if (isBuildMode) {
         ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
         for (let r = 0; r < MAP_SIZE; r++) {
@@ -737,7 +831,6 @@
         ctx.stroke();
       }
 
-      // 집 그리기
       houses.forEach(h => {
         let x = offsetX + h.c * scale;
         let y = offsetY + h.r * scale;
@@ -747,7 +840,6 @@
         }
       });
 
-      // 항구 그리기
       ports.forEach(p => {
         let x = offsetX + p.c * scale;
         let y = offsetY + p.r * scale;
@@ -757,25 +849,27 @@
         }
       });
 
-      // 핑크색 길쭉한 돛단배 (위에서 본 모양)
+      // 핑크색 길쭉한 돛단배 + 뒤쪽 화물(짐) 이펙트
       ships.forEach(s => {
         let x = offsetX + s.c * scale;
         let y = offsetY + s.r * scale;
         if (x + scale > 0 && x < canvas.width && y + scale > 0 && y < canvas.height) {
-          // 배 몸통 (핑크색 길쭉한 형태)
+          // 배 몸통
           ctx.fillStyle = '#ec4899';
           ctx.fillRect(Math.floor(x), Math.floor(y + scale * 0.35), scale * 1.2, scale * 0.3);
-          // 돛 (하얀색 삼각 형태)
+          // 뒤쪽 화물(짐) 이펙트 박스
+          ctx.fillStyle = '#9a3412';
+          ctx.fillRect(Math.floor(x + scale * 0.1), Math.floor(y + scale * 0.4), scale * 0.4, scale * 0.2);
+          // 돛
           ctx.fillStyle = '#ffffff';
           ctx.beginPath();
-          ctx.moveTo(x + scale * 0.6, y + scale * 0.1);
-          ctx.lineTo(x + scale * 0.9, y + scale * 0.35);
-          ctx.lineTo(x + scale * 0.6, y + scale * 0.35);
+          ctx.moveTo(x + scale * 0.7, y + scale * 0.1);
+          ctx.lineTo(x + scale * 1.0, y + scale * 0.35);
+          ctx.lineTo(x + scale * 0.7, y + scale * 0.35);
           ctx.fill();
         }
       });
 
-      // 선택된 건물 하얀색 반경 표시
       if (selectedBuilding && selectedBuilding.type === 'house') {
         let h = selectedBuilding.data;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
@@ -902,7 +996,7 @@
         let price = getPortPrice();
         if (isValidPortLocation(row, col) && money >= price && population >= 10) {
           ports.push({ r: row, c: col });
-          ships.push({ portR: row, portC: col, r: row, c: col, state: 'wait_at_port', timer: 2, targetR: null, targetC: null });
+          ships.push({ portR: row, portC: col, r: row, c: col, state: 'wait_at_port', timer: 2, path: [], pathIndex: 0 });
           money -= price;
           population -= 10;
           portBuyCount++;
@@ -925,7 +1019,6 @@
       }
     });
 
-    // 건물 철거 로직
     destroyBtn.addEventListener('click', () => {
       if (!selectedBuilding) return;
 
@@ -933,12 +1026,12 @@
         let h = selectedBuilding.data;
         houses = houses.filter(item => item !== h);
         population = Math.max(0, population - h.pop);
-        money += Math.floor(getHousePrice() * 0.5); // 50% 환급
+        money += Math.floor(getHousePrice() * 0.5);
       } else if (selectedBuilding.type === 'port') {
         let p = selectedBuilding.data;
         ports = ports.filter(item => item !== p);
         ships = ships.filter(s => s.portR !== p.r || s.portC !== p.c);
-        money += Math.floor(getPortPrice() * 0.5); // 50% 환급
+        money += Math.floor(getPortPrice() * 0.5);
       }
 
       selectedBuilding = null;
