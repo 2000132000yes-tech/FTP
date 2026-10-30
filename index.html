@@ -1,264 +1,547 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Graph AI Battle</title>
-    <style>
-        body {
-            margin: 0;
-            background-color: #121212;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-
-        #game-container {
-            position: relative;
-            width: 500px;
-            height: 500px;
-            background-color: #1e1e1e;
-            border: 3px solid #333;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        #ui-layer {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            pointer-events: none;
-            width: 90%;
-        }
-
-        #intro-text {
-            font-size: 16px;
-            font-weight: bold;
-            color: #00ffcc;
-            text-shadow: 0 0 8px rgba(0,255,204,0.6);
-            white-space: pre-wrap;
-        }
-
-        #status-panel {
-            margin-top: 8px;
-            font-size: 13px;
-            color: #aaa;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Pixel Earth Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #050b14;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+    /* 하단 UI 창 */
+    #bottom-ui {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 24px);
+      max-width: 420px;
+      height: 64px;
+      background: rgba(18, 22, 36, 0.92);
+      border: 2px solid #3b486b;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      z-index: 10;
+    }
+    .stats-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .coin-icon {
+      width: 22px;
+      height: 22px;
+      background-color: #ffd700;
+      border: 2px solid #b8860b;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 11px;
+      color: #5c3a00;
+    }
+    .money-details {
+      display: flex;
+      flex-direction: column;
+    }
+    .money-text {
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+    .income-text {
+      color: #4ade80;
+      font-size: 10px;
+      margin-top: 1px;
+    }
+    .build-btn {
+      background: #2563eb;
+      border: 2px solid #60a5fa;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .build-btn.active {
+      background: #16a34a;
+      border-color: #86efac;
+    }
+    .build-btn:disabled {
+      background: #475569;
+      border-color: #64748b;
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .house-icon {
+      width: 12px;
+      height: 12px;
+      background: #4ade80;
+      clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
+    }
+    #synergy-banner {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.75);
+      border: 1px solid #4ade80;
+      color: #4ade80;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      pointer-events: none;
+      display: none;
+      z-index: 10;
+    }
+  </style>
 </head>
 <body>
-
-    <div id="game-container">
-        <div id="ui-layer">
-            <div id="intro-text"></div>
-            <div id="status-panel">상태: 시스템 초기화 중...</div>
+  <div id="game-container">
+    <canvas id="canvas"></canvas>
+    <div id="synergy-banner">시너지 발동 중!</div>
+    <div id="bottom-ui">
+      <div class="stats-container">
+        <div class="coin-icon">C</div>
+        <div class="money-details">
+          <div id="money-display" class="money-text">100</div>
+          <div id="income-display" class="income-text">+1/초</div>
         </div>
-        <canvas id="simCanvas" width="500" height="500"></canvas>
+      </div>
+      <button id="build-btn" class="build-btn">
+        <div class="house-icon"></div>
+        <span id="build-btn-text">집 건설 (50원)</span>
+      </button>
     </div>
+  </div>
 
-<script>
-    const canvas = document.getElementById('simCanvas');
+  <script>
+    const MAP_SIZE = 120;
+    const WATER_DEEP = 0, WATER_SHALLOW = 1, LAND = 2, STONE = 3;
+    const NATION_NONE = 0, NATION_PLAYER = 1, NATION_SMALL = 2, NATION_LARGE = 3;
+
+    let map = [];
+    let nations = [];
+    let houses = [];
+    
+    let money = 100;
+    let houseBuyCount = 0;
+    let isBuildMode = false;
+    let selectedHouse = null;
+
+    let scale = 1;
+    let minScale = 1;
+    let maxScale = 12;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const introTextEl = document.getElementById('intro-text');
-    const statusPanel = document.getElementById('status-panel');
+    const moneyDisplay = document.getElementById('money-display');
+    const incomeDisplay = document.getElementById('income-display');
+    const buildBtn = document.getElementById('build-btn');
+    const buildBtnText = document.getElementById('build-btn-text');
+    const synergyBanner = document.getElementById('synergy-banner');
 
-    // 1. 텍스트 애니메이션 설정
-    const fullMessage = "[SYSTEM] AI 위치 동기화 완료. 수학 그래프 공격 모듈 가동!";
-    let charIndex = 0;
-    let isTypingDone = false;
-
-    function typeWriter() {
-        if (charIndex < fullMessage.length) {
-            introTextEl.textContent += fullMessage.charAt(charIndex);
-            charIndex++;
-            setTimeout(typeWriter, 40);
-        } else {
-            isTypingDone = true;
-            statusPanel.textContent = "전투 시작! AI들이 함수 그래프를 발사합니다.";
-            setTimeout(() => { 
-                introTextEl.style.display = 'none'; 
-            }, 1500);
-        }
+    class FastNoise {
+      constructor() {
+        this.p = new Uint8Array(512);
+        for (let i = 0; i < 256; i++) this.p[i] = this.p[256 + i] = Math.floor(Math.random() * 256);
+      }
+      noise(x, y) {
+        let X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+        x -= Math.floor(x); y -= Math.floor(y);
+        let u = x * x * x * (x * (x * 6 - 15) + 10);
+        let v = y * y * y * (y * (y * 6 - 15) + 10);
+        let A = this.p[X] + Y, B = this.p[X + 1] + Y;
+        return this.lerp(v, this.lerp(u, this.grad(this.p[A], x, y), this.grad(this.p[B], x - 1, y)),
+                           this.lerp(u, this.grad(this.p[A + 1], x, y - 1), this.grad(this.p[B + 1], x - 1, y - 1)));
+      }
+      lerp(t, a, b) { return a + t * (b - a); }
+      grad(hash, x, y) {
+        let h = hash & 7;
+        let u = h < 4 ? x : y;
+        let v = h < 4 ? y : x;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+      }
     }
 
-    // 2. 게임 오브젝트 (AI 공들) 설정
-    const colors = ['#ff5252', '#ffeb3b', '#4caf50', '#2196f3', '#e040fb'];
-    let ais = [];
-    let bullets = [];
+    const noiseGen = new FastNoise();
 
-    class AIObject {
-        constructor(id, x, y, color) {
-            this.id = id;
-            this.x = x;
-            this.y = y;
-            this.vx = (Math.random() - 0.5) * 2.5;
-            this.vy = (Math.random() - 0.5) * 2.5;
-            this.radius = 12;
-            this.color = color;
-            this.hp = 100;
-            this.isAlive = true;
-            this.attackCooldown = Math.random() * 50 + 30;
+    function getHousePrice() {
+      if (houseBuyCount < 4) return 50;
+      return 50 * Math.pow(2, houseBuyCount - 3);
+    }
+
+    function formatMoney(num) {
+      if (num >= 10000) return (num / 1000).toFixed(0) + 'K';
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+      return Math.floor(num).toString();
+    }
+
+    function initMap() {
+      map = Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(WATER_DEEP));
+      nations = Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(NATION_NONE));
+
+      for (let r = 0; r < MAP_SIZE; r++) {
+        for (let c = 0; c < MAP_SIZE; c++) {
+          let nx = c / 18, ny = r / 18;
+          let val = noiseGen.noise(nx, ny) + noiseGen.noise(nx * 2, ny * 2) * 0.5;
+          if (val > 0.15) map[r][c] = LAND;
+          else if (val > 0.05) map[r][c] = WATER_SHALLOW;
         }
+      }
 
-        update() {
-            if (!this.isAlive) return;
-
-            // 이동 (벽 충돌 반사)
-            this.x += this.vx;
-            this.y += this.vy;
-
-            if (this.x < this.radius || this.x > canvas.width - this.radius) this.vx *= -1;
-            if (this.y < this.radius || this.y > canvas.height - this.radius) this.vy *= -1;
-
-            // 공격 쿨다운
-            if (isTypingDone && this.attackCooldown > 0) {
-                this.attackCooldown--;
+      let stoneCenters = [];
+      for (let i = 0; i < 6; i++) {
+        let cr = Math.floor(Math.random() * MAP_SIZE);
+        let cc = Math.floor(Math.random() * MAP_SIZE);
+        if (map[cr][cc] === LAND) stoneCenters.push({ r: cr, c: cc, radius: 2 + Math.random() * 2 });
+      }
+      stoneCenters.forEach(sc => {
+        for (let r = 0; r < MAP_SIZE; r++) {
+          for (let c = 0; c < MAP_SIZE; c++) {
+            let dist = Math.hypot(r - sc.r, c - sc.c);
+            if (dist <= sc.radius && map[r][c] === LAND) {
+              map[r][c] = STONE;
             }
+          }
         }
+      });
 
-        draw() {
-            if (!this.isAlive) return;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = this.color;
-            ctx.fill();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#fff';
-            ctx.stroke();
-            ctx.closePath();
-
-            // HP 바
-            ctx.fillStyle = 'red';
-            ctx.fillRect(this.x - 15, this.y - 20, 30, 4);
-            ctx.fillStyle = 'green';
-            ctx.fillRect(this.x - 15, this.y - 20, (this.hp / 100) * 30, 4);
+      let placed = false;
+      for (let attempts = 0; attempts < 500 && !placed; attempts++) {
+        let pr = Math.floor(Math.random() * (MAP_SIZE - 6)) + 3;
+        let pc = Math.floor(Math.random() * (MAP_SIZE - 6)) + 3;
+        
+        let valid = true;
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            if (map[pr + dr][pc + dc] !== LAND) valid = false;
+          }
         }
-
-        shootGraph(targets) {
-            if (!this.isAlive || targets.length === 0) return;
-
-            const liveTargets = targets.filter(t => t.id !== this.id && t.isAlive);
-            if (liveTargets.length === 0) return;
-
-            const target = liveTargets[Math.floor(Math.random() * liveTargets.length)];
-
-            bullets.push({
-                startX: this.x,
-                startY: this.y,
-                currX: this.x,
-                currY: this.y,
-                targetX: target.x,
-                targetY: target.y,
-                color: this.color,
-                progress: 0,
-                speed: 0.04,
-                shooterId: this.id
-            });
-        }
-    }
-
-    function initAI() {
-        ais = [];
-        const margin = 50;
-        for (let i = 0; i < 5; i++) {
-            let x = Math.random() * (canvas.width - margin * 2) + margin;
-            let y = Math.random() * (canvas.height - margin * 2) + margin;
-            ais.push(new AIObject(i, x, y, colors[i]));
-        }
-    }
-
-    function updateGame() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // 배경 그리드
-        ctx.strokeStyle = '#2a2a2a';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < canvas.width; i += 50) {
-            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-        }
-
-        // AI 업데이트
-        ais.forEach(ai => {
-            ai.update();
-            ai.draw();
-
-            if (ai.attackCooldown <= 0 && isTypingDone) {
-                ai.shootGraph(ais);
-                ai.attackCooldown = Math.random() * 60 + 40; 
+        if (valid) {
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              nations[pr + dr][pc + dc] = NATION_PLAYER;
             }
+          }
+          placed = true;
+        }
+      }
+
+      placeNations(NATION_SMALL, 4, 2);
+      placeNations(NATION_LARGE, 2, 5);
+    }
+
+    function placeNations(type, count, radius) {
+      for (let i = 0; i < count; i++) {
+        let nr = Math.floor(Math.random() * MAP_SIZE);
+        let nc = Math.floor(Math.random() * MAP_SIZE);
+        for (let r = 0; r < MAP_SIZE; r++) {
+          for (let c = 0; c < MAP_SIZE; c++) {
+            if (Math.hypot(r - nr, c - nc) <= radius && map[r][c] === LAND && nations[r][c] === NATION_NONE) {
+              nations[r][c] = type;
+            }
+          }
+        }
+      }
+    }
+
+    function calculateIncome() {
+      let total = 1;
+      let maxSynergyMultiplier = 1;
+
+      houses.forEach(h => {
+        let nearbyCount = 0;
+        houses.forEach(other => {
+          let dist = Math.hypot(h.r - other.r, h.c - other.c);
+          if (dist <= 3) nearbyCount++;
         });
 
-        // 탄환(그래프 서칭/발사) 업데이트
-        for (let i = bullets.length - 1; i >= 0; i--) {
-            let b = bullets[i];
-            b.progress += b.speed;
+        let baseHouseIncome = 5;
+        let bonusIncome = (nearbyCount - 1);
+        
+        let mult = 1;
+        if (nearbyCount >= 20) mult = 4;
+        else if (nearbyCount >= 10) mult = 3;
+        else if (nearbyCount >= 5) mult = 2;
 
-            let interX = b.startX + (b.targetX - b.startX) * b.progress;
-            let interY = b.startY + (b.targetY - b.startY) * b.progress;
-            
-            // 수학 함수 그래프 궤적 (sin 곡선 파동)
-            let waveOffset = Math.sin(b.progress * Math.PI * 4) * 20;
-            b.currX = interX;
-            b.currY = interY + waveOffset;
+        if (mult > maxSynergyMultiplier) maxSynergyMultiplier = mult;
 
-            ctx.beginPath();
-            ctx.arc(b.currX, b.currY, 5, 0, Math.PI * 2);
-            ctx.fillStyle = b.color;
-            ctx.shadowColor = b.color;
-            ctx.shadowBlur = 10;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.closePath();
+        total += (baseHouseIncome + bonusIncome) * mult;
+      });
 
-            // 충돌 체크
-            ais.forEach(ai => {
-                if (ai.isAlive && ai.id !== b.shooterId) {
-                    let dist = Math.hypot(ai.x - b.currX, ai.y - b.currY);
-                    if (dist < ai.radius + 5) {
-                        ai.hp -= 34; // 3발 맞으면 파괴
-                        if (ai.hp <= 0) ai.isAlive = false;
-                        bullets.splice(i, 1);
-                    }
-                }
-            });
+      if (maxSynergyMultiplier > 1) {
+        synergyBanner.style.display = 'block';
+        synergyBanner.innerText = `집 시너지 발동! (${maxSynergyMultiplier}배 보너스)`;
+      } else {
+        synergyBanner.style.display = 'none';
+      }
 
-            if (b.progress >= 1) {
-                bullets.splice(i, 1);
-            }
-        }
-
-        // 승리 조건 체크
-        let aliveAis = ais.filter(ai => ai.isAlive);
-        if (isTypingDone && aliveAis.length <= 1) {
-            statusPanel.textContent = aliveAis.length === 1 ? 
-                `게임 종료! 최후 생존 AI 승리!` : 
-                "게임 종료! 무승부!";
-            // 게임이 끝나도 렌더링은 유지
-            requestAnimationFrame(updateGame);
-            return;
-        }
-
-        requestAnimationFrame(updateGame);
+      return total;
     }
 
-    // 초기화 및 실행
-    initAI();
-    typeWriter(); // 즉시 타이핑 시작
-    requestAnimationFrame(updateGame);
+    function gameLoop() {
+      let income = calculateIncome();
+      money += income;
+      updateUI();
+    }
 
-</script>
+    function updateUI() {
+      moneyDisplay.innerText = formatMoney(money);
+      incomeDisplay.innerText = `+${formatMoney(calculateIncome())}/초`;
+
+      let price = getHousePrice();
+      buildBtnText.innerText = `집 건설 (${formatMoney(price)}원)`;
+      buildBtn.disabled = money < price;
+    }
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      let scaleX = canvas.width / MAP_SIZE;
+      let scaleY = canvas.height / MAP_SIZE;
+      minScale = Math.min(scaleX, scaleY);
+
+      if (scale < minScale) scale = minScale;
+      clampOffset();
+      draw();
+    }
+
+    function clampOffset() {
+      let mapW = MAP_SIZE * scale;
+      let mapH = MAP_SIZE * scale;
+
+      if (mapW <= canvas.width) {
+        offsetX = (canvas.width - mapW) / 2;
+      } else {
+        offsetX = Math.min(0, Math.max(canvas.width - mapW, offsetX));
+      }
+
+      if (mapH <= canvas.height) {
+        offsetY = (canvas.height - mapH) / 2;
+      } else {
+        offsetY = Math.min(0, Math.max(canvas.height - mapH, offsetY));
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let r = 0; r < MAP_SIZE; r++) {
+        for (let c = 0; c < MAP_SIZE; c++) {
+          let x = offsetX + c * scale;
+          let y = offsetY + r * scale;
+
+          if (x + scale < 0 || x > canvas.width || y + scale < 0 || y > canvas.height) continue;
+
+          let tile = map[r][c];
+          if (tile === WATER_DEEP) ctx.fillStyle = '#1e3a8a';
+          else if (tile === WATER_SHALLOW) ctx.fillStyle = '#3b82f6';
+          else if (tile === LAND) ctx.fillStyle = '#22c55e';
+          else if (tile === STONE) ctx.fillStyle = '#64748b';
+
+          let nation = nations[r][c];
+          if (nation === NATION_PLAYER) ctx.fillStyle = '#ec4899';
+          else if (nation === NATION_SMALL) ctx.fillStyle = '#a3e635';
+          else if (nation === NATION_LARGE) ctx.fillStyle = '#a855f7';
+
+          ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(scale), Math.ceil(scale));
+
+          if (scale > 4) {
+            ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(Math.floor(x), Math.floor(y), Math.ceil(scale), Math.ceil(scale));
+          }
+        }
+      }
+
+      houses.forEach(h => {
+        let x = offsetX + h.c * scale;
+        let y = offsetY + h.r * scale;
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(Math.floor(x + scale * 0.1), Math.floor(y + scale * 0.1), scale * 0.8, scale * 0.8);
+      });
+
+      if (selectedHouse) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        for (let r = 0; r < MAP_SIZE; r++) {
+          for (let c = 0; c < MAP_SIZE; c++) {
+            if (Math.hypot(r - selectedHouse.r, c - selectedHouse.c) <= 3) {
+              let x = offsetX + c * scale;
+              let y = offsetY + r * scale;
+              ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(scale), Math.ceil(scale));
+            }
+          }
+        }
+      }
+    }
+
+    let isDragging = false;
+    let startX = 0, startY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.clientX - offsetX;
+      startY = e.clientY - offsetY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      offsetX = e.clientX - startX;
+      offsetY = e.clientY - startY;
+      clampOffset();
+      draw();
+    });
+
+    window.addEventListener('mouseup', () => isDragging = false);
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      let zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+      let newScale = Math.min(maxScale, Math.max(minScale, scale * zoomFactor));
+
+      let mouseX = e.clientX;
+      let mouseY = e.clientY;
+
+      offsetX = mouseX - (mouseX - offsetX) * (newScale / scale);
+      offsetY = mouseY - (mouseY - offsetY) * (newScale / scale);
+      scale = newScale;
+
+      clampOffset();
+      draw();
+    }, { passive: false });
+
+    let initialPinchDist = null;
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        startX = e.touches[0].clientX - offsetX;
+        startY = e.touches[0].clientY - offsetY;
+      } else if (e.touches.length === 2) {
+        isDragging = false;
+        initialPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      }
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1 && isDragging) {
+        offsetX = e.touches[0].clientX - startX;
+        offsetY = e.touches[0].clientY - startY;
+        clampOffset();
+        draw();
+      } else if (e.touches.length === 2 && initialPinchDist) {
+        let currentDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        let zoomFactor = currentDist / initialPinchDist;
+        initialPinchDist = currentDist;
+
+        let centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        let centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+        let newScale = Math.min(maxScale, Math.max(minScale, scale * zoomFactor));
+        offsetX = centerX - (centerX - offsetX) * (newScale / scale);
+        offsetY = centerY - (centerY - offsetY) * (newScale / scale);
+        scale = newScale;
+
+        clampOffset();
+        draw();
+      }
+    });
+
+    canvas.addEventListener('touchend', () => {
+      isDragging = false;
+      initialPinchDist = null;
+    });
+
+    canvas.addEventListener('click', (e) => {
+      let rect = canvas.getBoundingClientRect();
+      let clickX = e.clientX - rect.left - offsetX;
+      let clickY = e.clientY - rect.top - offsetY;
+
+      let col = Math.floor(clickX / scale);
+      let row = Math.floor(clickY / scale);
+
+      if (row < 0 || row >= MAP_SIZE || col < 0 || col >= MAP_SIZE) return;
+
+      if (isBuildMode) {
+        let price = getHousePrice();
+        if (nations[row][col] === NATION_PLAYER && money >= price) {
+          let hasHouse = houses.some(h => h.r === row && h.c === col);
+          if (!hasHouse) {
+            houses.push({ r: row, c: col });
+            money -= price;
+            houseBuyCount++;
+            isBuildMode = false;
+            buildBtn.classList.remove('active');
+            updateUI();
+            draw();
+          }
+        }
+      } else {
+        let house = houses.find(h => h.r === row && h.c === col);
+        if (house) {
+          selectedHouse = (selectedHouse === house) ? null : house;
+        } else {
+          selectedHouse = null;
+        }
+        draw();
+      }
+    });
+
+    buildBtn.addEventListener('click', () => {
+      isBuildMode = !isBuildMode;
+      if (isBuildMode) {
+        buildBtn.classList.add('active');
+      } else {
+        buildBtn.classList.remove('active');
+      }
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+    initMap();
+    resizeCanvas();
+    setInterval(gameLoop, 1000);
+  </script>
 </body>
 </html>
