@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Pixel Earth Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
@@ -17,7 +18,7 @@
       height: 100%;
       overflow: hidden;
       background-color: #050b14;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: 'Press Start 2P', monospace, sans-serif;
     }
     #game-container {
       position: relative;
@@ -37,10 +38,10 @@
       left: 50%;
       transform: translateX(-50%);
       width: calc(100% - 24px);
-      max-width: 420px;
+      max-width: 440px;
       height: 64px;
       background: rgba(18, 22, 36, 0.92);
-      border: 2px solid #3b486b;
+      border: 3px solid #3b486b;
       border-radius: 8px;
       display: flex;
       align-items: center;
@@ -55,8 +56,8 @@
       gap: 10px;
     }
     .coin-icon {
-      width: 22px;
-      height: 22px;
+      width: 24px;
+      height: 24px;
       background-color: #ffd700;
       border: 2px solid #b8860b;
       border-radius: 50%;
@@ -64,31 +65,31 @@
       align-items: center;
       justify-content: center;
       font-weight: bold;
-      font-size: 11px;
+      font-size: 10px;
       color: #5c3a00;
     }
     .money-details {
       display: flex;
       flex-direction: column;
+      gap: 4px;
     }
     .money-text {
       color: #fff;
-      font-size: 14px;
+      font-size: 11px;
       font-weight: bold;
-      letter-spacing: 0.5px;
     }
     .income-text {
       color: #4ade80;
-      font-size: 10px;
-      margin-top: 1px;
+      font-size: 8px;
     }
     .build-btn {
+      font-family: 'Press Start 2P', monospace, sans-serif;
       background: #2563eb;
       border: 2px solid #60a5fa;
       color: white;
-      padding: 6px 12px;
+      padding: 8px 10px;
       border-radius: 6px;
-      font-size: 11px;
+      font-size: 8px;
       font-weight: bold;
       cursor: pointer;
       display: flex;
@@ -107,8 +108,8 @@
       cursor: not-allowed;
     }
     .house-icon {
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       background: #4ade80;
       clip-path: polygon(50% 0%, 100% 40%, 100% 100%, 0% 100%, 0% 40%);
     }
@@ -117,12 +118,12 @@
       top: 12px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.75);
-      border: 1px solid #4ade80;
+      background: rgba(0,0,0,0.85);
+      border: 2px solid #4ade80;
       color: #4ade80;
-      padding: 4px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
-      font-size: 11px;
+      font-size: 8px;
       pointer-events: none;
       display: none;
       z-index: 10;
@@ -162,14 +163,22 @@
     let isBuildMode = false;
     let selectedHouse = null;
 
+    // 확대를 훨씬 더 많이 가능하게 조절 (최대 35배)
     let scale = 1;
     let minScale = 1;
-    let maxScale = 12;
+    let maxScale = 35;
     let offsetX = 0;
     let offsetY = 0;
 
     const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    
+    // 렉 감소를 위한 오프스크린 맵 캔버스 캐싱
+    let mapCanvas = document.createElement('canvas');
+    let mapCtx = mapCanvas.getContext('2d');
+    mapCanvas.width = MAP_SIZE;
+    mapCanvas.height = MAP_SIZE;
+
     const moneyDisplay = document.getElementById('money-display');
     const incomeDisplay = document.getElementById('income-display');
     const buildBtn = document.getElementById('build-btn');
@@ -201,9 +210,10 @@
 
     const noiseGen = new FastNoise();
 
+    // 구매 가격 1.5배 상승 적용
     function getHousePrice() {
       if (houseBuyCount < 4) return 50;
-      return 50 * Math.pow(2, houseBuyCount - 3);
+      return Math.floor(50 * Math.pow(1.5, houseBuyCount - 3));
     }
 
     function formatMoney(num) {
@@ -265,6 +275,8 @@
 
       placeNations(NATION_SMALL, 4, 2);
       placeNations(NATION_LARGE, 2, 5);
+
+      renderMapCache();
     }
 
     function placeNations(type, count, radius) {
@@ -279,6 +291,34 @@
           }
         }
       }
+    }
+
+    // 맵 지형 픽셀 데이터 오프스크린 렌더링 (렉 감소 핵심)
+    function renderMapCache() {
+      let imgData = mapCtx.createImageData(MAP_SIZE, MAP_SIZE);
+      let data = imgData.data;
+
+      for (let r = 0; r < MAP_SIZE; r++) {
+        for (let c = 0; c < MAP_SIZE; c++) {
+          let idx = (r * MAP_SIZE + c) * 4;
+          let tile = map[r][c];
+          let nation = nations[r][c];
+
+          let rgb = [30, 58, 138]; // WATER_DEEP
+          if (nation === NATION_PLAYER) rgb = [236, 72, 153];
+          else if (nation === NATION_SMALL) rgb = [163, 230, 53];
+          else if (nation === NATION_LARGE) rgb = [168, 85, 247];
+          else if (tile === WATER_SHALLOW) rgb = [59, 130, 246];
+          else if (tile === LAND) rgb = [34, 197, 94];
+          else if (tile === STONE) rgb = [100, 116, 139];
+
+          data[idx] = rgb[0];
+          data[idx + 1] = rgb[1];
+          data[idx + 2] = rgb[2];
+          data[idx + 3] = 255;
+        }
+      }
+      mapCtx.putImageData(imgData, 0, 0);
     }
 
     function calculateIncome() {
@@ -307,7 +347,7 @@
 
       if (maxSynergyMultiplier > 1) {
         synergyBanner.style.display = 'block';
-        synergyBanner.innerText = `집 시너지 발동! (${maxSynergyMultiplier}배 보너스)`;
+        synergyBanner.innerText = `시너지 발동! (${maxSynergyMultiplier}배 보너스)`;
       } else {
         synergyBanner.style.display = 'none';
       }
@@ -360,48 +400,57 @@
       }
     }
 
+    // 최적화된 렌더링 루프
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#050b14';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      for (let r = 0; r < MAP_SIZE; r++) {
-        for (let c = 0; c < MAP_SIZE; c++) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(mapCanvas, 0, 0, MAP_SIZE, MAP_SIZE, offsetX, offsetY, MAP_SIZE * scale, MAP_SIZE * scale);
+
+      // 격자선 (고배율 확대시에만 정교하게 표시)
+      if (scale > 8) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = 0.5;
+        let startCol = Math.max(0, Math.floor(-offsetX / scale));
+        let endCol = Math.min(MAP_SIZE, Math.ceil((canvas.width - offsetX) / scale));
+        let startRow = Math.max(0, Math.floor(-offsetY / scale));
+        let endRow = Math.min(MAP_SIZE, Math.ceil((canvas.height - offsetY) / scale));
+
+        ctx.beginPath();
+        for (let c = startCol; c <= endCol; c++) {
           let x = offsetX + c * scale;
-          let y = offsetY + r * scale;
-
-          if (x + scale < 0 || x > canvas.width || y + scale < 0 || y > canvas.height) continue;
-
-          let tile = map[r][c];
-          if (tile === WATER_DEEP) ctx.fillStyle = '#1e3a8a';
-          else if (tile === WATER_SHALLOW) ctx.fillStyle = '#3b82f6';
-          else if (tile === LAND) ctx.fillStyle = '#22c55e';
-          else if (tile === STONE) ctx.fillStyle = '#64748b';
-
-          let nation = nations[r][c];
-          if (nation === NATION_PLAYER) ctx.fillStyle = '#ec4899';
-          else if (nation === NATION_SMALL) ctx.fillStyle = '#a3e635';
-          else if (nation === NATION_LARGE) ctx.fillStyle = '#a855f7';
-
-          ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(scale), Math.ceil(scale));
-
-          if (scale > 4) {
-            ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-            ctx.lineWidth = 0.5;
-            ctx.strokeRect(Math.floor(x), Math.floor(y), Math.ceil(scale), Math.ceil(scale));
-          }
+          ctx.moveTo(x, offsetY);
+          ctx.lineTo(x, offsetY + MAP_SIZE * scale);
         }
+        for (let r = startRow; r <= endRow; r++) {
+          let y = offsetY + r * scale;
+          ctx.moveTo(offsetX, y);
+          ctx.lineTo(offsetX + MAP_SIZE * scale, y);
+        }
+        ctx.stroke();
       }
 
+      // 집 그리기
       houses.forEach(h => {
         let x = offsetX + h.c * scale;
         let y = offsetY + h.r * scale;
-        ctx.fillStyle = '#15803d';
-        ctx.fillRect(Math.floor(x + scale * 0.1), Math.floor(y + scale * 0.1), scale * 0.8, scale * 0.8);
+        if (x + scale > 0 && x < canvas.width && y + scale > 0 && y < canvas.height) {
+          ctx.fillStyle = '#15803d';
+          ctx.fillRect(Math.floor(x + scale * 0.1), Math.floor(y + scale * 0.1), scale * 0.8, scale * 0.8);
+        }
       });
 
+      // 선택된 집 반경 표시 (3픽셀)
       if (selectedHouse) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-        for (let r = 0; r < MAP_SIZE; r++) {
-          for (let c = 0; c < MAP_SIZE; c++) {
+        let minR = Math.max(0, selectedHouse.r - 3);
+        let maxR = Math.min(MAP_SIZE - 1, selectedHouse.r + 3);
+        let minC = Math.max(0, selectedHouse.c - 3);
+        let maxC = Math.min(MAP_SIZE - 1, selectedHouse.c + 3);
+
+        for (let r = minR; r <= maxR; r++) {
+          for (let c = minC; c <= maxC; c++) {
             if (Math.hypot(r - selectedHouse.r, c - selectedHouse.c) <= 3) {
               let x = offsetX + c * scale;
               let y = offsetY + r * scale;
@@ -426,14 +475,14 @@
       offsetX = e.clientX - startX;
       offsetY = e.clientY - startY;
       clampOffset();
-      draw();
+      requestAnimationFrame(draw);
     });
 
     window.addEventListener('mouseup', () => isDragging = false);
 
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      let zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+      let zoomFactor = e.deltaY < 0 ? 1.2 : 0.8;
       let newScale = Math.min(maxScale, Math.max(minScale, scale * zoomFactor));
 
       let mouseX = e.clientX;
@@ -444,7 +493,7 @@
       scale = newScale;
 
       clampOffset();
-      draw();
+      requestAnimationFrame(draw);
     }, { passive: false });
 
     let initialPinchDist = null;
@@ -467,7 +516,7 @@
         offsetX = e.touches[0].clientX - startX;
         offsetY = e.touches[0].clientY - startY;
         clampOffset();
-        draw();
+        requestAnimationFrame(draw);
       } else if (e.touches.length === 2 && initialPinchDist) {
         let currentDist = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
@@ -485,7 +534,7 @@
         scale = newScale;
 
         clampOffset();
-        draw();
+        requestAnimationFrame(draw);
       }
     });
 
